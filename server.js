@@ -127,9 +127,25 @@ io.on('connection', (socket) => {
   socket.on('message', (text) => {
     const username = users.get(socket.id);
     if (username && text.trim()) {
+      const trimmed = text.trim();
+
+      // Handle commands
+      if (trimmed.startsWith('/')) {
+        const command = trimmed.slice(1).toLowerCase();
+
+        if (command === 'light') {
+          io.emit('action', {
+            text: `${username} lights a cigarette... *puff* *puff*`,
+            time: getTimestamp()
+          });
+          return;
+        }
+      }
+
+      // Regular message
       io.emit('chat', {
         user: username,
-        text: text.trim(),
+        text: trimmed,
         time: getTimestamp()
       });
     }

@@ -9,6 +9,9 @@
       <template v-if="msg.type === 'system'">
         <span class="system-text">* {{ msg.text }}</span>
       </template>
+      <template v-else-if="msg.type === 'action'">
+        <span class="action-text">* {{ msg.text }}</span>
+      </template>
       <template v-else>
         <span class="username">{{ msg.user }}&gt;</span>
         <span class="text">{{ msg.text }}</span>
@@ -63,6 +66,11 @@ watch(() => props.messages.length, async () => {
 
 .message.system .system-text {
   color: var(--system-color);
+  font-style: italic;
+}
+
+.message.action .action-text {
+  color: var(--primary-color);
   font-style: italic;
 }
 

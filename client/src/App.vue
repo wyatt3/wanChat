@@ -64,6 +64,15 @@ onMounted(() => {
     })
   })
 
+  // Handle action messages
+  socket.value.on('action', (data) => {
+    messages.value.push({
+      type: 'action',
+      text: data.text,
+      time: data.time
+    })
+  })
+
   // Handle user list updates
   socket.value.on('users', (userList) => {
     users.value = userList
