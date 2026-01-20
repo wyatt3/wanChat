@@ -6,10 +6,20 @@
         <button class="update-btn" @click="handleUpdate" :disabled="updating">
           {{ updating ? 'Updating...' : 'Update' }}
         </button>
-        <span class="users">{{ users.length }} user{{ users.length !== 1 ? 's' : '' }} online</span>
+        <span class="user-count">{{ users.length }} user{{ users.length !== 1 ? 's' : '' }} online</span>
       </div>
     </div>
-    <MessageList :messages="messages" />
+    <div class="main-content">
+      <MessageList :messages="messages" />
+      <div class="sidebar">
+        <div class="sidebar-header">Online Users</div>
+        <ul class="user-list">
+          <li v-for="user in users" :key="user" class="user-item">
+            <span class="user-indicator">></span> {{ user }}
+          </li>
+        </ul>
+      </div>
+    </div>
     <CommandInput :username="username" @send="handleSend" />
   </div>
 </template>
@@ -97,9 +107,49 @@ async function waitForServer() {
   gap: 15px;
 }
 
-.users {
+.user-count {
   color: var(--dim-color);
   font-size: 0.9em;
+}
+
+.main-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 180px;
+  border-left: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.sidebar-header {
+  padding: 10px;
+  color: var(--primary-color);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.9em;
+}
+
+.user-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.user-item {
+  padding: 6px 10px;
+  color: var(--text-color);
+  font-size: 0.9em;
+}
+
+.user-indicator {
+  color: var(--primary-color);
+  margin-right: 5px;
 }
 
 .update-btn {
