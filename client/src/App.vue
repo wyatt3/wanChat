@@ -1,0 +1,70 @@
+<template>
+  <div class="terminal-window">
+    <LoginScreen v-if="!joined" @join="handleJoin" />
+    <ChatRoom
+      v-else
+      :messages="messages"
+      :users="users"
+      :username="username"
+      @send="handleSend"
+    />
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted, onUnmounted } from 'vue'
+import { io } from 'socket.io-client'
+import LoginScreen from './components/LoginScreen.vue'
+import ChatRoom from './components/ChatRoom.vue'
+
+const socket = ref(null)
+const joined = ref(false)
+const username = ref('')
+const messages = ref([])
+const users = ref([])
+
+onMounted(() => {
+  // Connect to socket server
+  socket.value = io()
+
+  // Handle incoming chat messages
+  socket.value.on('chat', (data) => {
+    messages.value.push({
+      type: 'chat',
+      user: data.user,
+      text: data.text,
+      time: data.time
+    })
+  })
+
+  // Handle system messages
+  socket.value.on('system', (data) => {
+    messages.value.push({
+      type: 'system',
+      text: data.text,
+      time: data.time
+    })
+  })
+
+  // Handle user list updates
+  socket.value.on('users', (userList) => {
+    users.value = userList
+  })
+})
+
+onUnmounted(() => {
+  if (socket.value) {
+    socket.value.disconnect()
+  }
+})
+
+function handleJoin(name) {
+  username.value = name
+  socket.value.emit('join', name)
+  joined.value = true
+}
+
+function handleSend(text) {
+  socket.value.emit('message', text)
+}
+</script>
