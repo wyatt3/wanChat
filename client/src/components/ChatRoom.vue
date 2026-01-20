@@ -15,7 +15,8 @@
         <div class="sidebar-header">Online Users</div>
         <ul class="user-list">
           <li v-for="user in users" :key="user" class="user-item">
-            <span class="user-indicator">></span> {{ user }}
+            <span class="user-indicator">></span>
+            <span :style="{ color: getUserColor(user) }">{{ user }}</span>
           </li>
         </ul>
       </div>
@@ -46,6 +47,16 @@ defineProps({
 
 const emit = defineEmits(['send'])
 const updating = ref(false)
+
+// Generate consistent color from username
+function getUserColor(username) {
+  let hash = 0
+  for (let i = 0; i < username.length; i++) {
+    hash = username.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  const hue = Math.abs(hash) % 360
+  return `hsl(${hue}, 70%, 60%)`
+}
 
 function handleSend(text) {
   emit('send', text)

@@ -13,7 +13,7 @@
         <span class="action-text">* {{ msg.text }}</span>
       </template>
       <template v-else>
-        <span class="username">{{ msg.user }}&gt;</span>
+        <span class="username" :style="{ color: getUserColor(msg.user) }">{{ msg.user }}&gt;</span>
         <span class="text">{{ msg.text }}</span>
       </template>
     </div>
@@ -34,6 +34,16 @@ const props = defineProps({
 })
 
 const messageContainer = ref(null)
+
+// Generate consistent color from username
+function getUserColor(username) {
+  let hash = 0
+  for (let i = 0; i < username.length; i++) {
+    hash = username.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  const hue = Math.abs(hash) % 360
+  return `hsl(${hue}, 70%, 60%)`
+}
 
 watch(() => props.messages.length, async () => {
   await nextTick()
