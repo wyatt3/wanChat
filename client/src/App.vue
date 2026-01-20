@@ -25,7 +25,18 @@ const users = ref([])
 
 onMounted(() => {
   // Connect to socket server
-  socket.value = io()
+  socket.value = io({
+    reconnection: true,
+    reconnectionDelay: 500,
+    reconnectionAttempts: Infinity
+  })
+
+  // Auto-rejoin on reconnect
+  socket.value.on('connect', () => {
+    if (joined.value && username.value) {
+      socket.value.emit('join', username.value)
+    }
+  })
 
   // Handle incoming chat messages
   socket.value.on('chat', (data) => {
