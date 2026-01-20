@@ -9,7 +9,6 @@
       @keyup.enter="handleSend"
       placeholder="Type a message..."
     />
-    <span class="cursor">_</span>
   </div>
 </template>
 
@@ -63,19 +62,10 @@ function handleSend() {
   font-family: inherit;
   font-size: inherit;
   outline: none;
-  caret-color: transparent;
+  caret-color: var(--primary-color);
 }
 
 .input::placeholder {
   color: var(--dim-color);
-}
-
-.cursor {
-  color: var(--primary-color);
-  animation: blink 1s step-end infinite;
-}
-
-@keyframes blink {
-  50% { opacity: 0; }
 }
 </style>

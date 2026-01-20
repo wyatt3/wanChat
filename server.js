@@ -40,9 +40,9 @@ app.get('/update', (req, res) => {
 
       console.log('Server dependencies installed');
 
-      // Install client dependencies
+      // Install client dependencies (include dev for vite)
       console.log('Installing client dependencies...');
-      exec('npm install', { cwd: path.join(__dirname, 'client') }, (err, clientInstallOut, clientInstallErr) => {
+      exec('npm install --include=dev', { cwd: path.join(__dirname, 'client') }, (err, clientInstallOut, clientInstallErr) => {
         if (err) {
           console.error('Client npm install failed:', clientInstallErr);
           return res.status(500).send(`Client npm install failed:\n${clientInstallErr}`);

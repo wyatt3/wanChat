@@ -23,7 +23,6 @@ __      ____ _ _ __ / ____| |__   __ _| |_
           maxlength="20"
           autofocus
         />
-        <span class="cursor">_</span>
       </div>
       <p v-if="error" class="error">{{ error }}</p>
     </div>
@@ -114,16 +113,7 @@ function handleJoin() {
   font-family: inherit;
   font-size: inherit;
   outline: none;
-  caret-color: transparent;
-}
-
-.cursor {
-  color: var(--primary-color);
-  animation: blink 1s step-end infinite;
-}
-
-@keyframes blink {
-  50% { opacity: 0; }
+  caret-color: var(--primary-color);
 }
 
 .error {
