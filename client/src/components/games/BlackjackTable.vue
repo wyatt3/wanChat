@@ -8,12 +8,27 @@
     <!-- Betting Phase -->
     <div v-if="gameState.phase === 'betting'" class="betting-phase">
       <p>{{ gameState.host }} is starting a game of Blackjack!</p>
-      <p>Type <code>/bet [amount]</code> to join or <code>/fold</code> to pass</p>
-      <div class="bet-actions">
-        <button @click="quickBet(5)" class="bet-btn">Bet $5</button>
-        <button @click="quickBet(10)" class="bet-btn">Bet $10</button>
-        <button @click="quickBet(25)" class="bet-btn">Bet $25</button>
-        <button @click="fold" class="fold-btn">Fold</button>
+      <template v-if="!hasActed">
+        <p>Enter your bet amount to join</p>
+        <div class="bet-input-section">
+          <span class="dollar-sign">$</span>
+          <input
+            v-model.number="betAmount"
+            type="number"
+            min="1"
+            class="bet-input"
+            placeholder="Amount"
+            @keyup.enter="placeBet"
+          />
+        </div>
+        <div class="bet-actions">
+          <button @click="placeBet" class="bet-btn" :disabled="!betAmount || betAmount < 1">Place Bet</button>
+          <button @click="fold" class="fold-btn">Fold</button>
+        </div>
+      </template>
+      <div v-else class="waiting-message">
+        <div class="waiting-icon">⏳</div>
+        <p>Waiting for other players...</p>
       </div>
     </div>
 
@@ -134,7 +149,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 
 const props = defineProps({
   gameState: {
@@ -149,6 +164,9 @@ const props = defineProps({
 
 const emit = defineEmits(['send'])
 
+const betAmount = ref(10)
+const hasActed = ref(false)
+
 const phaseText = computed(() => {
   switch (props.gameState.phase) {
     case 'betting':
@@ -162,12 +180,16 @@ const phaseText = computed(() => {
   }
 })
 
-function quickBet(amount) {
-  emit('send', `/bet ${amount}`)
+function placeBet() {
+  if (betAmount.value && betAmount.value >= 1) {
+    emit('send', `/bet ${betAmount.value}`)
+    hasActed.value = true
+  }
 }
 
 function fold() {
   emit('send', '/fold')
+  hasActed.value = true
 }
 
 function action(act) {
@@ -231,11 +253,33 @@ function formatResult(result) {
   margin: 10px 0;
 }
 
-.betting-phase code {
-  background: rgba(0, 0, 0, 0.3);
-  padding: 2px 6px;
-  border-radius: 4px;
+.bet-input-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin: 20px 0;
+}
+
+.dollar-sign {
+  font-size: 1.2em;
   color: #4ade80;
+}
+
+.bet-input {
+  width: 120px;
+  padding: 10px 15px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  color: white;
+  font-size: 1.2em;
+  text-align: center;
+}
+
+.bet-input:focus {
+  outline: none;
+  border-color: #4ade80;
 }
 
 .bet-actions {
@@ -257,9 +301,14 @@ function formatResult(result) {
   transition: transform 0.1s, background 0.2s;
 }
 
-.bet-btn:hover {
+.bet-btn:hover:not(:disabled) {
   background: #22c55e;
   transform: scale(1.05);
+}
+
+.bet-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .fold-btn {
@@ -274,6 +323,27 @@ function formatResult(result) {
 
 .fold-btn:hover {
   background: #dc2626;
+}
+
+.waiting-message {
+  text-align: center;
+  padding: 30px;
+}
+
+.waiting-icon {
+  font-size: 3em;
+  margin-bottom: 15px;
+  animation: bounce 1s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.waiting-message p {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1.1em;
 }
 
 /* Playing Phase */

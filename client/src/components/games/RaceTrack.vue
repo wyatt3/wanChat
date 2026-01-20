@@ -33,43 +33,45 @@
     <!-- Betting Phase -->
     <div v-if="gameState.phase === 'betting'" class="betting-section">
       <p>{{ gameState.host }} is starting a horse race!</p>
-      <p>Select a horse and enter your bet amount:</p>
-      <div class="bet-options">
-        <div
-          v-for="(horse, idx) in gameState.horses"
-          :key="idx"
-          class="bet-option"
-          :class="{ selected: selectedHorse === idx + 1 }"
-          @click="selectedHorse = idx + 1"
-        >
-          <span class="opt-number">{{ idx + 1 }}</span>
-          <span class="opt-name">{{ horse.name }}</span>
-          <span class="opt-odds">{{ horse.odds }}:1</span>
+      <template v-if="!hasActed">
+        <p>Select a horse and enter your bet amount:</p>
+        <div class="bet-options">
+          <div
+            v-for="(horse, idx) in gameState.horses"
+            :key="idx"
+            class="bet-option"
+            :class="{ selected: selectedHorse === idx + 1 }"
+            @click="selectedHorse = idx + 1"
+          >
+            <span class="opt-number">{{ idx + 1 }}</span>
+            <span class="opt-name">{{ horse.name }}</span>
+            <span class="opt-odds">{{ horse.odds }}:1</span>
+          </div>
         </div>
-      </div>
-      <div class="bet-amount-section">
-        <input
-          v-model.number="betAmount"
-          type="number"
-          min="1"
-          class="bet-input"
-          placeholder="Amount"
-        />
-        <div class="quick-bets">
-          <button @click="betAmount = 5" class="quick-btn">$5</button>
-          <button @click="betAmount = 10" class="quick-btn">$10</button>
-          <button @click="betAmount = 25" class="quick-btn">$25</button>
+        <div class="bet-amount-section">
+          <span class="dollar-sign">$</span>
+          <input
+            v-model.number="betAmount"
+            type="number"
+            min="1"
+            class="bet-input"
+            placeholder="Amount"
+          />
         </div>
-      </div>
-      <div class="bet-actions">
-        <button
-          @click="placeBet"
-          class="place-bet-btn"
-          :disabled="!selectedHorse || !betAmount"
-        >
-          Place Bet
-        </button>
-        <button @click="pass" class="pass-btn">Pass</button>
+        <div class="bet-actions">
+          <button
+            @click="placeBet"
+            class="place-bet-btn"
+            :disabled="!selectedHorse || !betAmount"
+          >
+            Place Bet
+          </button>
+          <button @click="pass" class="pass-btn">Pass</button>
+        </div>
+      </template>
+      <div v-else class="waiting-message">
+        <div class="waiting-icon">🏇</div>
+        <p>Waiting for other players...</p>
       </div>
     </div>
 
@@ -116,6 +118,7 @@ const emit = defineEmits(['send'])
 
 const selectedHorse = ref(null)
 const betAmount = ref(10)
+const hasActed = ref(false)
 
 const phaseText = computed(() => {
   switch (props.gameState.phase) {
@@ -133,12 +136,13 @@ const phaseText = computed(() => {
 function placeBet() {
   if (selectedHorse.value && betAmount.value) {
     emit('send', `/horse ${selectedHorse.value} ${betAmount.value}`)
-    selectedHorse.value = null
+    hasActed.value = true
   }
 }
 
 function pass() {
   emit('send', '/pass')
+  hasActed.value = true
 }
 </script>
 
@@ -314,11 +318,15 @@ function pass() {
 
 .bet-amount-section {
   display: flex;
-  gap: 10px;
+  gap: 5px;
   align-items: center;
   justify-content: center;
   margin: 15px 0;
-  flex-wrap: wrap;
+}
+
+.dollar-sign {
+  font-size: 1.2em;
+  color: #ffd700;
 }
 
 .bet-input {
@@ -335,24 +343,6 @@ function pass() {
 .bet-input:focus {
   outline: none;
   border-color: #ffd700;
-}
-
-.quick-bets {
-  display: flex;
-  gap: 5px;
-}
-
-.quick-btn {
-  padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 5px;
-  color: white;
-  cursor: pointer;
-}
-
-.quick-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
 }
 
 .bet-actions {
@@ -397,6 +387,27 @@ function pass() {
 
 .pass-btn:hover {
   background: #4b5563;
+}
+
+.waiting-message {
+  text-align: center;
+  padding: 30px;
+}
+
+.waiting-icon {
+  font-size: 3em;
+  margin-bottom: 15px;
+  animation: trot 0.5s ease-in-out infinite;
+}
+
+@keyframes trot {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.waiting-message p {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1.1em;
 }
 
 /* Running */

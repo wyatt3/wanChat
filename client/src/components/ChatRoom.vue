@@ -242,16 +242,17 @@ async function waitForServer() {
 }
 
 .game-overlay {
-  position: absolute;
-  top: 50px;
+  position: fixed;
+  top: 0;
   left: 0;
-  right: 180px;
-  bottom: 50px;
+  right: 0;
+  bottom: 0;
   background: rgba(0, 0, 0, 0.95);
   z-index: 100;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
+  overflow: auto;
 }
 </style>
