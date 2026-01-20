@@ -5,6 +5,11 @@ const { Server } = require('socket.io');
 const path = require('path');
 const { exec, spawn } = require('child_process');
 
+// Import game infrastructure
+const GameState = require('./server/gameState');
+const CommandHandler = require('./server/commandHandler');
+const snakeCommands = require('./server/commands/snake');
+
 const app = express();
 const server = createServer(app);
 const io = new Server(server);
@@ -13,6 +18,9 @@ const PORT = process.env.PORT || 3000;
 
 // Store connected users
 const users = new Map();
+
+// Initialize game state
+const gameState = new GameState();
 
 // Serve static files from Vue build
 app.use(express.static(path.join(__dirname, 'client/dist')));
@@ -102,6 +110,9 @@ function getTimestamp() {
   });
 }
 
+// Initialize command handler
+const commandHandler = new CommandHandler(io, gameState, users, getTimestamp);
+
 // Socket.IO connection handling
 io.on('connection', (socket) => {
   console.log(`Client connected: ${socket.id}`);
@@ -129,25 +140,50 @@ io.on('connection', (socket) => {
     if (username && text.trim()) {
       const trimmed = text.trim();
 
-      // Handle commands
+      // Check if it's a command
       if (trimmed.startsWith('/')) {
-        const command = trimmed.slice(1).toLowerCase();
-
-        if (command === 'light') {
-          io.emit('action', {
-            text: `${username} lights a cigarette... *puff* *puff*`,
-            time: getTimestamp()
-          });
-          return;
-        }
+        commandHandler.parse(socket, trimmed);
+      } else {
+        io.emit('chat', {
+          user: username,
+          text: trimmed,
+          time: getTimestamp()
+        });
       }
+    }
+  });
 
-      // Regular message
-      io.emit('chat', {
-        user: username,
-        text: trimmed,
-        time: getTimestamp()
-      });
+  // Handle snake input
+  socket.on('snake_input', (direction) => {
+    const username = users.get(socket.id);
+    if (username) {
+      const ctx = {
+        socket,
+        username,
+        io,
+        gameState,
+        users,
+        handler: commandHandler,
+        getTimestamp
+      };
+      snakeCommands.handleSnakeInput(ctx, direction);
+    }
+  });
+
+  // Handle snake quit
+  socket.on('snake_quit', () => {
+    const username = users.get(socket.id);
+    if (username) {
+      const ctx = {
+        socket,
+        username,
+        io,
+        gameState,
+        users,
+        handler: commandHandler,
+        getTimestamp
+      };
+      snakeCommands.handleSnakeQuit(ctx);
     }
   });
 
@@ -155,6 +191,31 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     const username = users.get(socket.id);
     if (username) {
+      // Handle game disconnections
+      // If they were hosting snake, end it
+      if (gameState.snake.active && gameState.snake.host === socket.id) {
+        const ctx = {
+          socket,
+          username,
+          io,
+          gameState,
+          users,
+          handler: commandHandler,
+          getTimestamp
+        };
+        snakeCommands.handleSnakeQuit(ctx);
+      }
+
+      // If in blackjack betting phase, mark as folded
+      if (gameState.blackjack.collectingWagers && !gameState.blackjack.wagers.has(socket.id)) {
+        gameState.blackjack.wagers.set(socket.id, 0);
+      }
+
+      // If in race betting phase, mark as passed
+      if (gameState.race.collectingBets && !gameState.race.bets.has(socket.id)) {
+        gameState.race.bets.set(socket.id, null);
+      }
+
       users.delete(socket.id);
 
       // Notify all users
