@@ -7,7 +7,7 @@ make changes
 
 ```
 git add .
-git commit - m "commit message"
+git commit -m "commit message"
 git push
 ```
 
