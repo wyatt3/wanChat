@@ -75,6 +75,37 @@ const gameState = reactive({
 // Audio context for sound effects
 let audioContext = null
 
+// Request notification permission
+function requestNotificationPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission()
+  }
+}
+
+// Show a notification (only when tab is not focused)
+function showNotification(title, body, tag = null) {
+  if ('Notification' in window &&
+      Notification.permission === 'granted' &&
+      document.hidden) {
+    const options = {
+      body,
+      icon: '/favicon.ico',
+      badge: '/favicon.ico',
+      silent: false
+    }
+    if (tag) {
+      options.tag = tag // Prevents duplicate notifications
+    }
+    const notification = new Notification(title, options)
+    notification.onclick = () => {
+      window.focus()
+      notification.close()
+    }
+    // Auto-close after 5 seconds
+    setTimeout(() => notification.close(), 5000)
+  }
+}
+
 function playFartSound() {
   try {
     if (!audioContext) {
@@ -163,6 +194,10 @@ onMounted(() => {
       text: data.text,
       time: data.time
     })
+    // Notify if message is from someone else
+    if (data.user !== username.value) {
+      showNotification(`${data.user}`, data.text, 'chat')
+    }
   })
 
   // Handle system messages
@@ -172,6 +207,10 @@ onMounted(() => {
       text: data.text,
       time: data.time
     })
+    // Notify on join/leave
+    if (data.text.includes('joined') || data.text.includes('left')) {
+      showNotification('wanChat', data.text, 'system')
+    }
   })
 
   // Handle action messages
@@ -220,6 +259,7 @@ onMounted(() => {
     gameState.blackjack.host = data.host
     gameState.blackjack.hands = {}
     gameState.blackjack.results = null
+    showNotification('Blackjack', `${data.host} started a game! Place your bets.`, 'blackjack')
   })
 
   socket.value.on('bj_bet_placed', (data) => {
@@ -241,6 +281,10 @@ onMounted(() => {
     if (data.hand && gameState.blackjack.hands[data.player]) {
       gameState.blackjack.hands[data.player].cards = data.hand.cards
       gameState.blackjack.hands[data.player].value = data.hand.value
+    }
+    // Notify if it's your turn
+    if (data.player === username.value) {
+      showNotification('Blackjack', "It's your turn!", 'bj-turn')
     }
   })
 
@@ -291,6 +335,7 @@ onMounted(() => {
     gameState.race.positions = [0, 0, 0, 0, 0]
     gameState.race.winner = null
     gameState.race.results = null
+    showNotification('Horse Race', `${data.host} started a race! Place your bets.`, 'race')
   })
 
   socket.value.on('race_running', (data) => {
@@ -330,6 +375,7 @@ onMounted(() => {
     gameState.snake.food = data.food
     gameState.snake.score = data.score
     gameState.snake.foodValue = data.foodValue
+    showNotification('Snake', `${data.host} is playing Snake!`, 'snake')
   })
 
   socket.value.on('snake_update', (data) => {
@@ -402,6 +448,8 @@ function handleJoin(name) {
   localStorage.setItem('wanchat_username', name)
   socket.value.emit('join', name)
   joined.value = true
+  // Request notification permission
+  requestNotificationPermission()
 }
 
 function handleSend(text) {
