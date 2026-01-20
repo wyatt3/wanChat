@@ -48,7 +48,25 @@ async function handleUpdate() {
   } catch (e) {
     // Server will restart, connection will be lost temporarily
   }
-  updating.value = false
+  // Wait for server to come back up, then refresh iframe
+  await waitForServer()
+  if (window.parent !== window) {
+    window.parent.postMessage('refresh', '*')
+  } else {
+    window.location.reload()
+  }
+}
+
+async function waitForServer() {
+  while (true) {
+    try {
+      const res = await fetch('/app', { method: 'HEAD' })
+      if (res.ok) return
+    } catch (e) {
+      // Server not ready yet
+    }
+    await new Promise(r => setTimeout(r, 500))
+  }
 }
 </script>
 

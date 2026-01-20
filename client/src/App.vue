@@ -24,6 +24,13 @@ const messages = ref([])
 const users = ref([])
 
 onMounted(() => {
+  // Check for saved username
+  const savedUsername = localStorage.getItem('wanchat_username')
+  if (savedUsername) {
+    username.value = savedUsername
+    joined.value = true
+  }
+
   // Connect to socket server
   socket.value = io({
     reconnection: true,
@@ -31,7 +38,7 @@ onMounted(() => {
     reconnectionAttempts: Infinity
   })
 
-  // Auto-rejoin on reconnect
+  // Auto-rejoin on reconnect (or initial connect with saved username)
   socket.value.on('connect', () => {
     if (joined.value && username.value) {
       socket.value.emit('join', username.value)
@@ -71,6 +78,7 @@ onUnmounted(() => {
 
 function handleJoin(name) {
   username.value = name
+  localStorage.setItem('wanchat_username', name)
   socket.value.emit('join', name)
   joined.value = true
 }

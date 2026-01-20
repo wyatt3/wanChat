@@ -17,6 +17,16 @@ const users = new Map();
 // Serve static files from Vue build
 app.use(express.static(path.join(__dirname, 'client/dist')));
 
+// Serve wrapper at root
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'client/dist/wrapper.html'));
+});
+
+// Serve app for iframe
+app.get('/app', (req, res) => {
+  res.sendFile(path.join(__dirname, 'client/dist/index.html'));
+});
+
 // Update endpoint - pulls latest changes, installs deps, rebuilds client, and restarts server
 app.get('/update', (req, res) => {
   console.log('Update requested, pulling changes...');
