@@ -129,10 +129,11 @@ function createPlayer() {
   // Load the SWF
   rufflePlayer.load(`/flash/${props.gameState.gameFile}`)
 
-  // Start capturing frames after a short delay to let the game load
+  // Start capturing frames after the game loads
+  // Ruffle needs time to initialize the canvas
   setTimeout(() => {
     startCapture()
-  }, 1000)
+  }, 2000)
 }
 
 function startCapture() {
@@ -155,9 +156,23 @@ function captureFrame() {
   if (!rufflePlayer) return
 
   try {
-    // Find the canvas inside the Ruffle player
-    const canvas = rufflePlayer.querySelector('canvas')
-    if (!canvas) return
+    // Ruffle uses shadow DOM, so we need to access the shadow root
+    let canvas = null
+
+    // Try shadow root first (Ruffle's structure)
+    if (rufflePlayer.shadowRoot) {
+      canvas = rufflePlayer.shadowRoot.querySelector('canvas')
+    }
+
+    // Fallback to direct query
+    if (!canvas) {
+      canvas = rufflePlayer.querySelector('canvas')
+    }
+
+    if (!canvas) {
+      console.warn('Canvas not found in Ruffle player')
+      return
+    }
 
     // Convert to data URL with reduced quality for bandwidth
     const dataUrl = canvas.toDataURL('image/jpeg', 0.6)
