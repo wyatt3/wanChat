@@ -136,21 +136,38 @@ function createPlayer() {
   }, 2000)
 }
 
-function startCapture() {
-  if (captureInterval) return
+let lastCaptureTime = 0
+let captureRunning = false
 
-  // Capture at ~8 fps for reasonable bandwidth
-  captureInterval = setInterval(() => {
+function startCapture() {
+  if (captureRunning) return
+  captureRunning = true
+  requestAnimationFrame(captureLoop)
+}
+
+function captureLoop(timestamp) {
+  if (!captureRunning) return
+
+  // Capture at ~8 fps (every 125ms)
+  if (timestamp - lastCaptureTime >= 125) {
     captureFrame()
-  }, 125)
+    lastCaptureTime = timestamp
+  }
+
+  requestAnimationFrame(captureLoop)
 }
 
 function stopCapture() {
+  captureRunning = false
   if (captureInterval) {
     clearInterval(captureInterval)
     captureInterval = null
   }
 }
+
+// Offscreen canvas for capturing WebGL content
+let captureCanvas = null
+let captureCtx = null
 
 function captureFrame() {
   if (!rufflePlayer) return
@@ -174,8 +191,24 @@ function captureFrame() {
       return
     }
 
+    // For WebGL canvases, we need to copy to a 2D canvas first
+    // because WebGL doesn't preserve the drawing buffer by default
+    if (!captureCanvas) {
+      captureCanvas = document.createElement('canvas')
+      captureCtx = captureCanvas.getContext('2d')
+    }
+
+    // Match dimensions
+    if (captureCanvas.width !== canvas.width || captureCanvas.height !== canvas.height) {
+      captureCanvas.width = canvas.width
+      captureCanvas.height = canvas.height
+    }
+
+    // Draw the WebGL canvas onto our 2D canvas
+    captureCtx.drawImage(canvas, 0, 0)
+
     // Convert to data URL with reduced quality for bandwidth
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.6)
+    const dataUrl = captureCanvas.toDataURL('image/jpeg', 0.6)
     emit('frame', dataUrl)
   } catch (e) {
     // Canvas might not be ready or cross-origin issues
