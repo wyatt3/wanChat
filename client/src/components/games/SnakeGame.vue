@@ -90,12 +90,12 @@ function draw() {
   const width = canvasWidth.value
   const height = canvasHeight.value
 
-  // Clear canvas - light spreadsheet background
-  ctx.fillStyle = '#ffffff'
+  // Clear canvas - dark background
+  ctx.fillStyle = '#1a1a1a'
   ctx.fillRect(0, 0, width, height)
 
-  // Draw grid - subtle gray lines
-  ctx.strokeStyle = '#e9ecef'
+  // Draw grid - subtle dark lines
+  ctx.strokeStyle = '#2a2a2a'
   ctx.lineWidth = 1
   for (let x = 0; x <= props.gameState.width; x++) {
     ctx.beginPath()
@@ -116,7 +116,7 @@ function draw() {
     const fy = props.gameState.food.y * cellSize
 
     // Draw as a simple square marker
-    ctx.fillStyle = '#dc3545'
+    ctx.fillStyle = '#ff4444'
     ctx.fillRect(fx + 3, fy + 3, cellSize - 6, cellSize - 6)
   }
 
@@ -127,12 +127,12 @@ function draw() {
       const sy = segment.y * cellSize
 
       if (index === 0) {
-        // Head - darker blue
-        ctx.fillStyle = '#0d6efd'
+        // Head - bright green
+        ctx.fillStyle = '#00ff00'
       } else {
-        // Body - gradient blue
+        // Body - gradient green
         const brightness = Math.max(0.4, 1 - index * 0.02)
-        ctx.fillStyle = `rgba(13, 110, 253, ${brightness})`
+        ctx.fillStyle = `rgba(0, 255, 0, ${brightness})`
       }
 
       // Draw simple rectangle
@@ -190,13 +190,13 @@ function handleQuit() {
 .snake-game {
   width: 100%;
   max-width: 500px;
-  background: #f8f9fa;
-  border: 1px solid #dee2e6;
+  background: #1a1a1a;
+  border: 1px solid #333333;
   border-radius: 4px;
   padding: 16px;
-  color: #212529;
+  color: #e0e0e0;
   font-family: 'Segoe UI', system-ui, sans-serif;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .game-header {
@@ -205,13 +205,13 @@ function handleQuit() {
   align-items: center;
   margin-bottom: 12px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #dee2e6;
+  border-bottom: 1px solid #333333;
 }
 
 .game-title {
   font-size: 1.1em;
   font-weight: 600;
-  color: #495057;
+  color: #e0e0e0;
 }
 
 .game-stats {
@@ -221,19 +221,19 @@ function handleQuit() {
 }
 
 .score {
-  color: #495057;
+  color: #b0b0b0;
 }
 
 .multiplier {
-  color: #6c757d;
+  color: #888888;
 }
 
 .game-container {
   position: relative;
   display: flex;
   justify-content: center;
-  background: #fff;
-  border: 1px solid #dee2e6;
+  background: #252525;
+  border: 1px solid #333333;
   border-radius: 4px;
   padding: 8px;
 }
@@ -248,7 +248,7 @@ function handleQuit() {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(26, 26, 26, 0.9);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -257,18 +257,18 @@ function handleQuit() {
 }
 
 .spectator-overlay p {
-  color: #495057;
+  color: #e0e0e0;
 }
 
 .spectator-note {
-  color: #6c757d;
+  color: #888888;
   font-size: 0.85em;
 }
 
 .controls-info {
   margin-top: 12px;
   text-align: center;
-  color: #6c757d;
+  color: #888888;
   font-size: 0.9em;
 }
 
@@ -277,18 +277,19 @@ function handleQuit() {
 }
 
 kbd {
-  background: #e9ecef;
-  border: 1px solid #ced4da;
+  background: #333333;
+  border: 1px solid #444444;
   border-radius: 3px;
   padding: 2px 6px;
   margin: 0 2px;
   font-family: inherit;
   font-size: 0.85em;
+  color: #e0e0e0;
 }
 
 .quit-btn {
   margin-top: 8px;
-  background: #6c757d;
+  background: #555555;
   color: white;
   border: none;
   padding: 6px 16px;
@@ -299,6 +300,6 @@ kbd {
 }
 
 .quit-btn:hover {
-  background: #5c636a;
+  background: #666666;
 }
 </style>

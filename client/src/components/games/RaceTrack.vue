@@ -150,13 +150,13 @@ function pass() {
 .race-track {
   width: 100%;
   max-width: 600px;
-  background: #f8f9fa;
-  border: 1px solid #dee2e6;
+  background: #1a1a1a;
+  border: 1px solid #333333;
   border-radius: 4px;
   padding: 20px;
-  color: #212529;
+  color: #e0e0e0;
   font-family: 'Segoe UI', system-ui, sans-serif;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .track-header {
@@ -165,24 +165,24 @@ function pass() {
   align-items: center;
   margin-bottom: 16px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #dee2e6;
+  border-bottom: 1px solid #333333;
 }
 
 .game-title {
   font-size: 1.1em;
   font-weight: 600;
-  color: #495057;
+  color: #e0e0e0;
 }
 
 .phase-indicator {
-  color: #6c757d;
+  color: #888888;
   font-size: 0.9em;
 }
 
 /* Track */
 .track-container {
-  background: #fff;
-  border: 1px solid #dee2e6;
+  background: #252525;
+  border: 1px solid #333333;
   border-radius: 4px;
   padding: 12px;
   margin-bottom: 16px;
@@ -193,7 +193,7 @@ function pass() {
   align-items: center;
   gap: 10px;
   padding: 8px 0;
-  border-bottom: 1px solid #f1f3f4;
+  border-bottom: 1px solid #2a2a2a;
 }
 
 .track-lane:last-child {
@@ -201,7 +201,7 @@ function pass() {
 }
 
 .track-lane.winner {
-  background: #e8f5e9;
+  background: #1a2a1a;
 }
 
 .lane-info {
@@ -213,8 +213,8 @@ function pass() {
 }
 
 .horse-number {
-  background: #e9ecef;
-  color: #495057;
+  background: #333333;
+  color: #b0b0b0;
   width: 20px;
   height: 20px;
   border-radius: 3px;
@@ -228,18 +228,18 @@ function pass() {
 .horse-name {
   font-weight: 500;
   font-size: 0.9em;
-  color: #212529;
+  color: #e0e0e0;
 }
 
 .horse-odds {
-  color: #6c757d;
+  color: #888888;
   font-size: 0.8em;
 }
 
 .lane-track {
   flex: 1;
   height: 20px;
-  background: #e9ecef;
+  background: #333333;
   border-radius: 3px;
   position: relative;
   overflow: hidden;
@@ -250,7 +250,7 @@ function pass() {
   top: 50%;
   transform: translateY(-50%);
   font-size: 0.8em;
-  color: #0d6efd;
+  color: #00ff00;
   transition: left 0.15s linear;
 }
 
@@ -260,7 +260,7 @@ function pass() {
   top: 50%;
   transform: translateY(-50%);
   font-size: 0.9em;
-  color: #adb5bd;
+  color: #555555;
 }
 
 /* Betting Section */
@@ -270,7 +270,7 @@ function pass() {
 
 .betting-section p {
   margin: 8px 0;
-  color: #495057;
+  color: #b0b0b0;
 }
 
 .bet-options {
@@ -285,24 +285,24 @@ function pass() {
   align-items: center;
   gap: 10px;
   padding: 8px 12px;
-  background: #fff;
-  border: 1px solid #dee2e6;
+  background: #252525;
+  border: 1px solid #333333;
   border-radius: 4px;
   cursor: pointer;
 }
 
 .bet-option:hover {
-  background: #f8f9fa;
+  background: #2a2a2a;
 }
 
 .bet-option.selected {
-  border-color: #0d6efd;
-  background: #f8f9ff;
+  border-color: #00ff00;
+  background: #1a2a1a;
 }
 
 .opt-number {
-  background: #e9ecef;
-  color: #495057;
+  background: #333333;
+  color: #b0b0b0;
   width: 24px;
   height: 24px;
   border-radius: 3px;
@@ -317,11 +317,11 @@ function pass() {
   flex: 1;
   text-align: left;
   font-weight: 500;
-  color: #212529;
+  color: #e0e0e0;
 }
 
 .opt-odds {
-  color: #6c757d;
+  color: #888888;
   font-size: 0.85em;
 }
 
@@ -335,24 +335,24 @@ function pass() {
 
 .dollar-sign {
   font-size: 1em;
-  color: #495057;
+  color: #b0b0b0;
 }
 
 .bet-input {
   width: 80px;
   padding: 8px 12px;
-  border: 1px solid #ced4da;
+  border: 1px solid #444444;
   border-radius: 4px;
-  background: #fff;
-  color: #212529;
+  background: #252525;
+  color: #e0e0e0;
   font-size: 1em;
   text-align: center;
 }
 
 .bet-input:focus {
   outline: none;
-  border-color: #0d6efd;
-  box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.15);
+  border-color: #00ff00;
+  box-shadow: 0 0 0 2px rgba(0, 255, 0, 0.15);
 }
 
 .bet-actions {
@@ -363,7 +363,7 @@ function pass() {
 }
 
 .place-bet-btn {
-  background: #0d6efd;
+  background: #00aa00;
   color: white;
   border: none;
   padding: 8px 20px;
@@ -374,7 +374,7 @@ function pass() {
 }
 
 .place-bet-btn:hover:not(:disabled) {
-  background: #0b5ed7;
+  background: #00cc00;
 }
 
 .place-bet-btn:disabled {
@@ -383,7 +383,7 @@ function pass() {
 }
 
 .pass-btn {
-  background: #6c757d;
+  background: #555555;
   color: white;
   border: none;
   padding: 8px 20px;
@@ -394,7 +394,7 @@ function pass() {
 }
 
 .pass-btn:hover {
-  background: #5c636a;
+  background: #666666;
 }
 
 .waiting-message {
@@ -405,7 +405,7 @@ function pass() {
 .waiting-icon {
   font-size: 1.5em;
   margin-bottom: 10px;
-  color: #6c757d;
+  color: #888888;
   animation: spin 2s linear infinite;
 }
 
@@ -415,7 +415,7 @@ function pass() {
 }
 
 .waiting-message p {
-  color: #6c757d;
+  color: #888888;
   font-size: 0.95em;
 }
 
@@ -427,7 +427,7 @@ function pass() {
 
 .race-status {
   font-size: 1em;
-  color: #6c757d;
+  color: #888888;
 }
 
 /* Results */
@@ -439,17 +439,17 @@ function pass() {
 .winner-announcement {
   font-size: 1em;
   font-weight: 600;
-  color: #198754;
+  color: #00ff00;
   margin-bottom: 12px;
   padding: 8px;
-  background: #e8f5e9;
-  border: 1px solid #c8e6c9;
+  background: #1a2a1a;
+  border: 1px solid #2a4a2a;
   border-radius: 4px;
 }
 
 .results-list {
-  background: #fff;
-  border: 1px solid #dee2e6;
+  background: #252525;
+  border: 1px solid #333333;
   border-radius: 4px;
   padding: 8px;
 }
@@ -458,7 +458,7 @@ function pass() {
   display: flex;
   justify-content: space-between;
   padding: 6px 8px;
-  border-bottom: 1px solid #f1f3f4;
+  border-bottom: 1px solid #2a2a2a;
   font-size: 0.9em;
 }
 
@@ -467,15 +467,15 @@ function pass() {
 }
 
 .result-player {
-  color: #495057;
+  color: #b0b0b0;
 }
 
 .result-outcome.win {
-  color: #198754;
+  color: #00ff00;
   font-weight: 500;
 }
 
 .result-outcome.lose {
-  color: #dc3545;
+  color: #ff4444;
 }
 </style>
