@@ -211,6 +211,31 @@ onMounted(() => {
     if (joined.value && username.value) {
       socket.value.emit('join', username.value)
     }
+
+    // Check for update notification
+    const updateInfo = localStorage.getItem('wanchat_update')
+    if (updateInfo) {
+      try {
+        const { commits, time } = JSON.parse(updateInfo)
+        // Only show if update was recent (within 30 seconds)
+        if (Date.now() - time < 30000 && commits.length > 0) {
+          const commitList = commits.map(c => `  • ${c}`).join('\n')
+          messages.value.push({
+            type: 'system',
+            text: `Server updated!\n${commitList}`,
+            time: new Date().toLocaleTimeString('en-US', {
+              hour12: false,
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit'
+            })
+          })
+        }
+      } catch (e) {
+        // Invalid JSON, ignore
+      }
+      localStorage.removeItem('wanchat_update')
+    }
   })
 
   // Handle incoming chat messages
@@ -285,7 +310,14 @@ onMounted(() => {
   })
 
   // Handle refresh (triggered on server update)
-  socket.value.on('refresh', () => {
+  socket.value.on('refresh', (data) => {
+    // Store update info before reload
+    if (data && data.commits && data.commits.length > 0) {
+      localStorage.setItem('wanchat_update', JSON.stringify({
+        commits: data.commits,
+        time: Date.now()
+      }))
+    }
     window.location.reload()
   })
 
