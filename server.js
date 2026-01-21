@@ -9,6 +9,7 @@ const { exec, spawn } = require('child_process');
 const GameState = require('./server/gameState');
 const CommandHandler = require('./server/commandHandler');
 const snakeCommands = require('./server/commands/snake');
+const flashCommands = require('./server/commands/flash');
 
 const app = express();
 const server = createServer(app);
@@ -209,6 +210,23 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Handle flash game quit
+  socket.on('flash_quit', () => {
+    const username = users.get(socket.id);
+    if (username) {
+      const ctx = {
+        socket,
+        username,
+        io,
+        gameState,
+        users,
+        handler: commandHandler,
+        getTimestamp
+      };
+      flashCommands.handleFlashQuit(ctx);
+    }
+  });
+
   // Handle disconnection
   socket.on('disconnect', () => {
     const username = users.get(socket.id);
@@ -226,6 +244,20 @@ io.on('connection', (socket) => {
           getTimestamp
         };
         snakeCommands.handleSnakeQuit(ctx);
+      }
+
+      // If they were hosting a flash game, end it
+      if (gameState.flash && gameState.flash.active && gameState.flash.hostSocketId === socket.id) {
+        const ctx = {
+          socket,
+          username,
+          io,
+          gameState,
+          users,
+          handler: commandHandler,
+          getTimestamp
+        };
+        flashCommands.handleFlashDisconnect(ctx);
       }
 
       // If in blackjack betting phase, mark as folded

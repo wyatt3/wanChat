@@ -11,6 +11,7 @@
       @send="handleSend"
       @snake-input="handleSnakeInput"
       @snake-quit="handleSnakeQuit"
+      @flash-quit="handleFlashQuit"
     />
     <!-- Smoke effect overlay -->
     <div v-if="showSmoke" class="smoke-overlay">
@@ -74,6 +75,15 @@ const gameState = reactive({
     food: null,
     score: 0,
     foodValue: 1
+  },
+
+  // Flash game state
+  flash: {
+    active: false,
+    host: null,
+    hostSocketId: null,
+    gameFile: null,
+    gameName: null
   }
 })
 
@@ -468,6 +478,21 @@ onMounted(() => {
       resetSnake()
     }, 3000)
   })
+
+  // === FLASH GAME EVENTS ===
+  socket.value.on('flash_start', (data) => {
+    gameState.activeGame = 'flash'
+    gameState.flash.active = true
+    gameState.flash.host = data.host
+    gameState.flash.hostSocketId = data.hostSocketId
+    gameState.flash.gameFile = data.gameFile
+    gameState.flash.gameName = data.gameName
+    showNotification('Flash Game', `${data.host} is playing ${data.gameName}!`, 'flash')
+  })
+
+  socket.value.on('flash_ended', () => {
+    resetFlash()
+  })
 })
 
 function resetBlackjack() {
@@ -511,6 +536,17 @@ function resetSnake() {
   }
 }
 
+function resetFlash() {
+  gameState.flash.active = false
+  gameState.flash.host = null
+  gameState.flash.hostSocketId = null
+  gameState.flash.gameFile = null
+  gameState.flash.gameName = null
+  if (gameState.activeGame === 'flash') {
+    gameState.activeGame = null
+  }
+}
+
 onUnmounted(() => {
   if (socket.value) {
     socket.value.disconnect()
@@ -536,6 +572,10 @@ function handleSnakeInput(direction) {
 
 function handleSnakeQuit() {
   socket.value.emit('snake_quit')
+}
+
+function handleFlashQuit() {
+  socket.value.emit('flash_quit')
 }
 </script>
 

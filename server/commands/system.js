@@ -8,6 +8,7 @@ function help(ctx) {
     'Blackjack: /deal /bet [amount] /fold /hit /stand /double /split',
     'Racing: /race /horse [1-5] [amount] /pass',
     'Snake: /snake (WASD to move)',
+    'Flash: /flash [game] (list or play Flash games)',
     'Fun: /fart /light',
     'Admin: /update /killall'
   ];

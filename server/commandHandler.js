@@ -5,6 +5,7 @@ const funCommands = require('./commands/fun');
 const blackjackCommands = require('./commands/blackjack');
 const racingCommands = require('./commands/racing');
 const snakeCommands = require('./commands/snake');
+const flashCommands = require('./commands/flash');
 
 class CommandHandler {
   constructor(io, gameState, users, getTimestamp) {
@@ -139,6 +140,10 @@ class CommandHandler {
       // Snake command
       case '/snake':
         return snakeCommands.snake(ctx);
+
+      // Flash game command
+      case '/flash':
+        return flashCommands.flash(ctx, args);
 
       default:
         this.sendToSocket(socket, `Unknown command: ${cmd}. Type /help for available commands.`);

@@ -32,6 +32,12 @@
         @input="handleSnakeInput"
         @quit="handleSnakeQuit"
       />
+      <FlashGame
+        v-if="gameState.activeGame === 'flash'"
+        :gameState="gameState.flash"
+        :username="username"
+        @quit="handleFlashQuit"
+      />
     </div>
 
     <div class="main-content">
@@ -58,6 +64,7 @@ import CommandInput from './CommandInput.vue'
 import BlackjackTable from './games/BlackjackTable.vue'
 import RaceTrack from './games/RaceTrack.vue'
 import SnakeGame from './games/SnakeGame.vue'
+import FlashGame from './games/FlashGame.vue'
 
 const props = defineProps({
   messages: {
@@ -82,7 +89,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['send', 'snake-input', 'snake-quit'])
+const emit = defineEmits(['send', 'snake-input', 'snake-quit', 'flash-quit'])
 const updating = ref(false)
 
 // Generate consistent color from username
@@ -105,6 +112,10 @@ function handleSnakeInput(direction) {
 
 function handleSnakeQuit() {
   emit('snake-quit')
+}
+
+function handleFlashQuit() {
+  emit('flash-quit')
 }
 
 async function handleUpdate() {

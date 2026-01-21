@@ -57,6 +57,15 @@ class GameState {
       gameLoop: null,
       speed: 150
     };
+
+    // Flash game state
+    this.flash = {
+      active: false,
+      host: null,
+      hostSocketId: null,
+      gameFile: null,
+      gameName: null
+    };
   }
 
   // Balance methods
@@ -175,15 +184,31 @@ class GameState {
     return this.snake.active;
   }
 
+  // Flash methods
+  isFlashActive() {
+    return this.flash.active;
+  }
+
+  resetFlash() {
+    this.flash = {
+      active: false,
+      host: null,
+      hostSocketId: null,
+      gameFile: null,
+      gameName: null
+    };
+  }
+
   // Check if any game is active
   isAnyGameActive() {
-    return this.isBlackjackActive() || this.isRaceActive() || this.isSnakeActive();
+    return this.isBlackjackActive() || this.isRaceActive() || this.isSnakeActive() || this.isFlashActive();
   }
 
   getActiveGame() {
     if (this.isBlackjackActive()) return 'blackjack';
     if (this.isRaceActive()) return 'race';
     if (this.isSnakeActive()) return 'snake';
+    if (this.isFlashActive()) return 'flash';
     return null;
   }
 }
