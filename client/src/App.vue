@@ -1,6 +1,6 @@
 <template>
-  <div class="terminal-window">
-    <LoginScreen v-if="!joined" @join="handleJoin" />
+  <div class="app-window" :class="skinClass">
+    <LoginScreen v-if="!joined" @join="handleJoin" :skin="currentSkin" />
     <ChatRoom
       v-else
       :messages="messages"
@@ -9,11 +9,14 @@
       :balances="balances"
       :gameState="gameState"
       :flashStreamFrame="flashStreamFrame"
+      :skin="currentSkin"
       @send="handleSend"
       @snake-input="handleSnakeInput"
       @snake-quit="handleSnakeQuit"
       @flash-quit="handleFlashQuit"
       @flash-frame="handleFlashFrame"
+      @change-skin="changeSkin"
+      @local-message="handleLocalMessage"
     />
     <!-- Smoke effect overlay -->
     <div v-if="showSmoke" class="smoke-overlay">
@@ -23,7 +26,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import { io } from 'socket.io-client'
 import LoginScreen from './components/LoginScreen.vue'
 import ChatRoom from './components/ChatRoom.vue'
@@ -36,6 +39,26 @@ const users = ref([])
 const balances = ref({})
 const showSmoke = ref(false)
 const flashStreamFrame = ref(null)
+
+// Skin system
+const SKINS = ['terminal', 'spreadsheet', 'email', 'notepad']
+const currentSkin = ref('terminal')
+const skinClass = computed(() => `skin-${currentSkin.value}`)
+
+// Apply skin to document for CSS variable scoping
+watch(currentSkin, (newSkin) => {
+  document.documentElement.setAttribute('data-skin', newSkin)
+  localStorage.setItem('wanchat_skin', newSkin)
+}, { immediate: true })
+
+function changeSkin(skinName) {
+  const skin = skinName.toLowerCase()
+  if (SKINS.includes(skin)) {
+    currentSkin.value = skin
+    return true
+  }
+  return false
+}
 
 // Game state
 const gameState = reactive({
@@ -204,6 +227,12 @@ function getSmokeStyle(n) {
 }
 
 onMounted(() => {
+  // Check for saved skin
+  const savedSkin = localStorage.getItem('wanchat_skin')
+  if (savedSkin && SKINS.includes(savedSkin)) {
+    currentSkin.value = savedSkin
+  }
+
   // Check for saved username
   const savedUsername = localStorage.getItem('wanchat_username')
   if (savedUsername) {
@@ -594,6 +623,20 @@ function handleFlashFrame(frameData) {
   // Host sends frames to server for relay to spectators
   // Use volatile emit - drops frame if socket is busy (prevents backlog)
   socket.value.volatile.emit('flash_frame', frameData)
+}
+
+function handleLocalMessage(text) {
+  // Add a local-only system message (not sent to server)
+  messages.value.push({
+    type: 'system',
+    text: text,
+    time: new Date().toLocaleTimeString('en-US', {
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    })
+  })
 }
 </script>
 

@@ -138,6 +138,8 @@ function createPlayer() {
 
 let lastCaptureTime = 0
 let captureRunning = false
+let isCapturing = false  // Guard against overlapping captures
+let captureTimeout = null  // Safety timeout to prevent stuck captures
 
 function startCapture() {
   if (captureRunning) return
@@ -148,8 +150,8 @@ function startCapture() {
 function captureLoop(timestamp) {
   if (!captureRunning) return
 
-  // Capture at ~60 fps (every 16ms)
-  if (timestamp - lastCaptureTime >= 16) {
+  // Capture at ~30 fps (every 33ms) - more sustainable for encoding/streaming
+  if (timestamp - lastCaptureTime >= 33 && !isCapturing) {
     captureFrame()
     lastCaptureTime = timestamp
   }
@@ -159,6 +161,11 @@ function captureLoop(timestamp) {
 
 function stopCapture() {
   captureRunning = false
+  isCapturing = false
+  if (captureTimeout) {
+    clearTimeout(captureTimeout)
+    captureTimeout = null
+  }
   if (captureInterval) {
     clearInterval(captureInterval)
     captureInterval = null
@@ -169,8 +176,19 @@ function stopCapture() {
 let captureCanvas = null
 let captureCtx = null
 
-function captureFrame() {
-  if (!rufflePlayer) return
+async function captureFrame() {
+  if (!rufflePlayer || isCapturing) return
+  isCapturing = true
+
+  // Safety timeout - if encoding takes longer than 200ms, reset and try again
+  // This prevents the capture from getting stuck
+  if (captureTimeout) clearTimeout(captureTimeout)
+  captureTimeout = setTimeout(() => {
+    if (isCapturing) {
+      console.warn('Frame capture timeout, resetting')
+      isCapturing = false
+    }
+  }, 200)
 
   try {
     // Ruffle uses shadow DOM, so we need to access the shadow root
@@ -187,7 +205,8 @@ function captureFrame() {
     }
 
     if (!canvas) {
-      console.warn('Canvas not found in Ruffle player')
+      clearTimeout(captureTimeout)
+      isCapturing = false
       return
     }
 
@@ -207,12 +226,30 @@ function captureFrame() {
     // Draw the WebGL canvas onto our 2D canvas
     captureCtx.drawImage(canvas, 0, 0)
 
-    // Convert to data URL with reduced quality for bandwidth
-    const dataUrl = captureCanvas.toDataURL('image/jpeg', 0.6)
-    emit('frame', dataUrl)
+    // Use toBlob which is async and doesn't block the main thread
+    captureCanvas.toBlob((blob) => {
+      clearTimeout(captureTimeout)
+      if (blob && captureRunning) {
+        const reader = new FileReader()
+        reader.onloadend = () => {
+          if (captureRunning) {
+            emit('frame', reader.result)
+          }
+          isCapturing = false
+        }
+        reader.onerror = () => {
+          console.warn('FileReader error')
+          isCapturing = false
+        }
+        reader.readAsDataURL(blob)
+      } else {
+        isCapturing = false
+      }
+    }, 'image/jpeg', 0.4)  // Lower quality for faster encoding
   } catch (e) {
-    // Canvas might not be ready or cross-origin issues
     console.warn('Frame capture failed:', e)
+    clearTimeout(captureTimeout)
+    isCapturing = false
   }
 }
 

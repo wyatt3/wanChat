@@ -32,6 +32,13 @@ __      ____ _ _ __ / ____| |__   __ _| |_
 <script setup>
 import { ref, onMounted } from 'vue'
 
+defineProps({
+  skin: {
+    type: String,
+    default: 'terminal'
+  }
+})
+
 const emit = defineEmits(['join'])
 
 const username = ref('')

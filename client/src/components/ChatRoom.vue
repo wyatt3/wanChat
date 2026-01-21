@@ -1,6 +1,7 @@
 <template>
-  <div class="chat-room">
-    <div class="header">
+  <div class="chat-room" :class="`skin-${skin}`">
+    <!-- Terminal header -->
+    <div v-if="skin === 'terminal'" class="header">
       <span class="title">wanChat v1.0 - Terminal Chat</span>
       <div class="header-right">
         <span v-if="balances[username]" class="balance">${{ balances[username] }}</span>
@@ -8,6 +9,61 @@
           {{ updating ? 'Updating...' : 'Update' }}
         </button>
         <span class="user-count">{{ users.length }} user{{ users.length !== 1 ? 's' : '' }} online</span>
+      </div>
+    </div>
+
+    <!-- Spreadsheet header -->
+    <div v-else-if="skin === 'spreadsheet'" class="header spreadsheet-header">
+      <div class="spreadsheet-toolbar">
+        <span class="spreadsheet-title">Q4 Budget Review.xlsx - Microsoft Excel</span>
+        <div class="spreadsheet-menu">
+          <span>File</span>
+          <span>Home</span>
+          <span>Insert</span>
+          <span>Page Layout</span>
+          <span>Formulas</span>
+          <span>Data</span>
+          <span>Review</span>
+          <span>View</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <span v-if="balances[username]" class="balance">${{ balances[username] }}</span>
+        <button class="update-btn" @click="handleUpdate" :disabled="updating">
+          {{ updating ? 'Sync' : 'Syncing...' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Email header -->
+    <div v-else-if="skin === 'email'" class="header email-header">
+      <div class="email-toolbar">
+        <span class="email-logo">M</span>
+        <span class="email-title">Outlook - Team Discussion</span>
+        <input type="text" class="email-search" placeholder="Search mail..." readonly />
+      </div>
+      <div class="header-right">
+        <span v-if="balances[username]" class="balance">${{ balances[username] }}</span>
+        <button class="update-btn" @click="handleUpdate" :disabled="updating">
+          {{ updating ? 'Syncing...' : 'Sync' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Notepad header -->
+    <div v-else-if="skin === 'notepad'" class="header notepad-header">
+      <span class="notepad-title">meeting_notes.txt - Notepad</span>
+      <div class="notepad-menu">
+        <span>File</span>
+        <span>Edit</span>
+        <span>Format</span>
+        <span>View</span>
+        <span>Help</span>
+      </div>
+      <div class="header-right">
+        <button class="update-btn" @click="handleUpdate" :disabled="updating">
+          {{ updating ? 'Saving...' : 'Save' }}
+        </button>
       </div>
     </div>
 
@@ -43,19 +99,36 @@
     </div>
 
     <div class="main-content">
-      <MessageList :messages="messages" />
-      <div class="sidebar">
-        <div class="sidebar-header">Online Users</div>
+      <MessageList :messages="messages" :skin="skin" />
+      <div class="sidebar" :class="`sidebar-${skin}`">
+        <div class="sidebar-header">
+          <template v-if="skin === 'terminal'">Online Users</template>
+          <template v-else-if="skin === 'spreadsheet'">Sheet1 | Sheet2 | Contributors</template>
+          <template v-else-if="skin === 'email'">Folders</template>
+          <template v-else-if="skin === 'notepad'">{{ users.length }} collaborators</template>
+        </div>
         <ul class="user-list">
           <li v-for="user in users" :key="user" class="user-item">
-            <span class="user-indicator">></span>
-            <span :style="{ color: getUserColor(user) }">{{ user }}</span>
+            <template v-if="skin === 'terminal'">
+              <span class="user-indicator">></span>
+              <span :style="{ color: getUserColor(user) }">{{ user }}</span>
+            </template>
+            <template v-else-if="skin === 'spreadsheet'">
+              <span class="spreadsheet-cell">{{ user }}</span>
+            </template>
+            <template v-else-if="skin === 'email'">
+              <span class="email-folder-icon">📁</span>
+              <span>{{ user }}</span>
+            </template>
+            <template v-else>
+              <span>{{ user }}</span>
+            </template>
             <span v-if="balances[user]" class="user-balance">${{ balances[user] }}</span>
           </li>
         </ul>
       </div>
     </div>
-    <CommandInput :username="username" @send="handleSend" />
+    <CommandInput :username="username" :skin="skin" @send="handleSend" />
   </div>
 </template>
 
@@ -92,10 +165,14 @@ const props = defineProps({
   flashStreamFrame: {
     type: String,
     default: null
+  },
+  skin: {
+    type: String,
+    default: 'terminal'
   }
 })
 
-const emit = defineEmits(['send', 'snake-input', 'snake-quit', 'flash-quit', 'flash-frame'])
+const emit = defineEmits(['send', 'snake-input', 'snake-quit', 'flash-quit', 'flash-frame', 'change-skin', 'local-message'])
 const updating = ref(false)
 
 // Generate consistent color from username
@@ -108,7 +185,28 @@ function getUserColor(username) {
   return `hsl(${hue}, 70%, 60%)`
 }
 
+// Available skins
+const SKINS = ['terminal', 'spreadsheet', 'email', 'notepad']
+
 function handleSend(text) {
+  // Handle /skin command client-side
+  if (text.startsWith('/skin')) {
+    const parts = text.split(' ')
+    if (parts.length === 1) {
+      // Show available skins
+      emit('local-message', `Skins: ${SKINS.join(', ')} | Current: ${props.skin}`)
+      return
+    }
+    const skinName = parts[1].toLowerCase()
+    if (SKINS.includes(skinName)) {
+      emit('change-skin', skinName)
+      emit('local-message', `Switched to ${skinName} skin`)
+      return
+    } else {
+      emit('local-message', `Unknown skin: ${skinName}. Available: ${SKINS.join(', ')}`)
+      return
+    }
+  }
   emit('send', text)
 }
 
@@ -273,5 +371,153 @@ async function waitForServer() {
   justify-content: center;
   max-height: 50vh;
   overflow-y: auto;
+}
+
+/* Spreadsheet skin styles */
+.spreadsheet-header {
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0;
+}
+
+.spreadsheet-toolbar {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.spreadsheet-title {
+  padding: 4px 10px;
+  font-size: 0.85em;
+  color: var(--header-text);
+  background: #217346;
+  color: white;
+}
+
+.spreadsheet-menu {
+  display: flex;
+  gap: 0;
+  padding: 2px 10px;
+  background: var(--header-bg);
+}
+
+.spreadsheet-menu span {
+  padding: 6px 12px;
+  font-size: 0.85em;
+  color: var(--text-color);
+  cursor: pointer;
+}
+
+.spreadsheet-menu span:hover {
+  background: var(--border-color);
+}
+
+.skin-spreadsheet .sidebar-header {
+  background: #f3f3f3;
+  border-bottom: 2px solid #217346;
+  font-size: 0.8em;
+}
+
+.spreadsheet-cell {
+  font-family: 'Calibri', sans-serif;
+}
+
+/* Email skin styles */
+.email-header {
+  background: #0078d4;
+  padding: 8px 15px;
+}
+
+.email-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.email-logo {
+  font-size: 1.5em;
+  font-weight: bold;
+  color: white;
+  background: #0063b1;
+  padding: 4px 10px;
+  border-radius: 2px;
+}
+
+.email-title {
+  color: white;
+  font-weight: 500;
+}
+
+.email-search {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  padding: 6px 12px;
+  border-radius: 2px;
+  color: white;
+  width: 200px;
+}
+
+.email-search::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.skin-email .header-right {
+  color: white;
+}
+
+.skin-email .update-btn {
+  border-color: white;
+  color: white;
+}
+
+.skin-email .sidebar-header {
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.email-folder-icon {
+  margin-right: 6px;
+}
+
+/* Notepad skin styles */
+.notepad-header {
+  flex-wrap: wrap;
+  padding: 0;
+  background: #f0f0f0;
+}
+
+.notepad-title {
+  padding: 4px 10px;
+  font-size: 0.9em;
+  background: #0078d4;
+  color: white;
+  width: 100%;
+}
+
+.notepad-menu {
+  display: flex;
+  padding: 2px 0;
+  width: 100%;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.notepad-menu span {
+  padding: 4px 10px;
+  font-size: 0.85em;
+  cursor: pointer;
+}
+
+.notepad-menu span:hover {
+  background: #e5e5e5;
+}
+
+.skin-notepad .header-right {
+  padding: 4px 10px;
+}
+
+.skin-notepad .sidebar {
+  border-left: 1px solid #d1d1d1;
+  background: #f9f9f9;
 }
 </style>

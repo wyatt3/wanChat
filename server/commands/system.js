@@ -10,7 +10,8 @@ function help(ctx) {
     'Snake: /snake (WASD to move)',
     'Flash: /flash [game] (list or play Flash games)',
     'Fun: /fart /light',
-    'Admin: /update /killall'
+    'Admin: /update /killall',
+    'UI: /skin [terminal|spreadsheet|email|notepad]'
   ];
 
   helpText.forEach(line => {
