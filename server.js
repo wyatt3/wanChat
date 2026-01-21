@@ -232,7 +232,8 @@ io.on('connection', (socket) => {
     // Only relay if this is the host of an active flash game
     if (gameState.flash && gameState.flash.active && gameState.flash.hostSocketId === socket.id) {
       // Broadcast to all other sockets (not the host)
-      socket.broadcast.emit('flash_frame', { frame: frameData });
+      // Use volatile to drop frames if clients can't keep up (prevents backlog)
+      socket.broadcast.volatile.emit('flash_frame', { frame: frameData });
     }
   });
 

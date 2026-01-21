@@ -592,7 +592,8 @@ function handleFlashQuit() {
 
 function handleFlashFrame(frameData) {
   // Host sends frames to server for relay to spectators
-  socket.value.emit('flash_frame', frameData)
+  // Use volatile emit - drops frame if socket is busy (prevents backlog)
+  socket.value.volatile.emit('flash_frame', frameData)
 }
 </script>
 
