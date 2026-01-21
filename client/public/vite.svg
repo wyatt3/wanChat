@@ -1,4 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-  <rect width="32" height="32" fill="#0d0d0d"/>
-  <text x="16" y="24" font-family="monospace" font-size="24" font-weight="bold" fill="#00ff00" text-anchor="middle">W</text>
+  <!-- cursed sheet background -->
+  <rect x="3" y="1" width="24" height="30" fill="#0f9d58" rx="2" transform="skewX(-3)"/>
+  <rect x="6" y="0" width="22" height="29" fill="#23a566" rx="1" transform="rotate(2, 16, 16)"/>
+
+  <!-- folded corner that's wrong -->
+  <polygon points="20,0 28,8 20,9" fill="#0c7a45"/>
+  <polygon points="21,1 27,7 21,8" fill="#b8e4c9"/>
+
+  <!-- wonky grid lines - horizontal -->
+  <rect x="7" y="11" width="19" height="2.5" fill="#ffffff" opacity="0.9" transform="rotate(-1, 16, 12)"/>
+  <rect x="6" y="16" width="20" height="2" fill="#ffffff" opacity="0.85" transform="rotate(1.5, 16, 17)"/>
+  <rect x="7" y="21" width="18" height="2.5" fill="#ffffff" opacity="0.9" transform="rotate(-2, 16, 22)"/>
+
+  <!-- wonky grid lines - vertical -->
+  <rect x="12" y="10" width="2" height="15" fill="#ffffff" opacity="0.8" transform="rotate(3, 13, 17)"/>
+  <rect x="19" y="9" width="2.5" height="16" fill="#ffffff" opacity="0.75" transform="rotate(-2, 20, 17)"/>
+
+  <!-- unsettling details -->
+  <circle cx="9" cy="13" r="1.5" fill="#ffffff" opacity="0.6"/>
+  <circle cx="24" cy="24" r="1" fill="#0c7a45"/>
+  <rect x="5" y="26" width="4" height="3" fill="#0c7a45" transform="skewX(10)"/>
 </svg>

@@ -284,6 +284,11 @@ onMounted(() => {
     window.close()
   })
 
+  // Handle refresh (triggered on server update)
+  socket.value.on('refresh', () => {
+    window.location.reload()
+  })
+
   // === BLACKJACK EVENTS ===
   socket.value.on('bj_wager_request', (data) => {
     gameState.activeGame = 'blackjack'

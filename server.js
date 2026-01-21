@@ -77,6 +77,11 @@ app.get('/update', (req, res) => {
           }
 
           console.log('Build complete');
+
+          // Broadcast refresh signal to all clients before restarting
+          io.emit('refresh');
+          console.log('Refresh signal sent to all clients');
+
           res.send(`Update successful:\n${gitOutput}\nDependencies installed.\nClient rebuilt.\n\nServer restarting...`);
 
           // Restart server after response is sent
