@@ -36,7 +36,9 @@
         v-if="gameState.activeGame === 'flash'"
         :gameState="gameState.flash"
         :username="username"
+        :streamFrame="flashStreamFrame"
         @quit="handleFlashQuit"
+        @frame="handleFlashFrame"
       />
     </div>
 
@@ -86,10 +88,14 @@ const props = defineProps({
   gameState: {
     type: Object,
     required: true
+  },
+  flashStreamFrame: {
+    type: String,
+    default: null
   }
 })
 
-const emit = defineEmits(['send', 'snake-input', 'snake-quit', 'flash-quit'])
+const emit = defineEmits(['send', 'snake-input', 'snake-quit', 'flash-quit', 'flash-frame'])
 const updating = ref(false)
 
 // Generate consistent color from username
@@ -116,6 +122,10 @@ function handleSnakeQuit() {
 
 function handleFlashQuit() {
   emit('flash-quit')
+}
+
+function handleFlashFrame(frameData) {
+  emit('flash-frame', frameData)
 }
 
 async function handleUpdate() {

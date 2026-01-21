@@ -8,10 +8,12 @@
       :username="username"
       :balances="balances"
       :gameState="gameState"
+      :flashStreamFrame="flashStreamFrame"
       @send="handleSend"
       @snake-input="handleSnakeInput"
       @snake-quit="handleSnakeQuit"
       @flash-quit="handleFlashQuit"
+      @flash-frame="handleFlashFrame"
     />
     <!-- Smoke effect overlay -->
     <div v-if="showSmoke" class="smoke-overlay">
@@ -33,6 +35,7 @@ const messages = ref([])
 const users = ref([])
 const balances = ref({})
 const showSmoke = ref(false)
+const flashStreamFrame = ref(null)
 
 // Game state
 const gameState = reactive({
@@ -493,6 +496,14 @@ onMounted(() => {
   socket.value.on('flash_ended', () => {
     resetFlash()
   })
+
+  // Flash game frame streaming (for spectators)
+  socket.value.on('flash_frame', (data) => {
+    // Only update if we're not the host
+    if (gameState.flash.active && gameState.flash.host !== username.value) {
+      flashStreamFrame.value = data.frame
+    }
+  })
 })
 
 function resetBlackjack() {
@@ -542,6 +553,7 @@ function resetFlash() {
   gameState.flash.hostSocketId = null
   gameState.flash.gameFile = null
   gameState.flash.gameName = null
+  flashStreamFrame.value = null
   if (gameState.activeGame === 'flash') {
     gameState.activeGame = null
   }
@@ -576,6 +588,11 @@ function handleSnakeQuit() {
 
 function handleFlashQuit() {
   socket.value.emit('flash_quit')
+}
+
+function handleFlashFrame(frameData) {
+  // Host sends frames to server for relay to spectators
+  socket.value.emit('flash_frame', frameData)
 }
 </script>
 

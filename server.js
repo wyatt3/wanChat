@@ -227,6 +227,15 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Handle flash game frame streaming (relay from host to spectators)
+  socket.on('flash_frame', (frameData) => {
+    // Only relay if this is the host of an active flash game
+    if (gameState.flash && gameState.flash.active && gameState.flash.hostSocketId === socket.id) {
+      // Broadcast to all other sockets (not the host)
+      socket.broadcast.emit('flash_frame', { frame: frameData });
+    }
+  });
+
   // Handle disconnection
   socket.on('disconnect', () => {
     const username = users.get(socket.id);

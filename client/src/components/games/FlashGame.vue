@@ -9,9 +9,23 @@
     </div>
 
     <div class="game-container">
-      <div ref="playerContainer" class="player-container"></div>
-      <div v-if="!isHost" class="spectator-notice">
-        Spectating {{ gameState.host }}'s game
+      <!-- Host sees the actual Ruffle player -->
+      <div v-if="isHost" ref="playerContainer" class="player-container"></div>
+
+      <!-- Spectators see streamed frames -->
+      <div v-else class="spectator-view">
+        <img
+          v-if="currentFrame"
+          :src="currentFrame"
+          class="stream-frame"
+          alt="Game stream"
+        />
+        <div v-else class="loading-stream">
+          <span>Connecting to stream...</span>
+        </div>
+        <div class="spectator-notice">
+          Watching {{ gameState.host }}'s game
+        </div>
       </div>
     </div>
 
@@ -33,22 +47,36 @@ const props = defineProps({
   username: {
     type: String,
     required: true
+  },
+  streamFrame: {
+    type: String,
+    default: null
   }
 })
 
-const emit = defineEmits(['quit'])
+const emit = defineEmits(['quit', 'frame'])
 
 const playerContainer = ref(null)
+const currentFrame = ref(null)
 let rufflePlayer = null
+let captureInterval = null
 
 const isHost = computed(() => props.username === props.gameState.host)
 
-onMounted(async () => {
-  // Load Ruffle
-  await loadRuffle()
+// Watch for incoming frames (spectators)
+watch(() => props.streamFrame, (newFrame) => {
+  if (!isHost.value && newFrame) {
+    currentFrame.value = newFrame
+  }
+})
 
-  if (playerContainer.value && props.gameState.gameFile) {
-    createPlayer()
+onMounted(async () => {
+  if (isHost.value) {
+    // Host: Load and run Ruffle, capture frames
+    await loadRuffle()
+    if (playerContainer.value && props.gameState.gameFile) {
+      createPlayer()
+    }
   }
 
   // Add keyboard listener for host
@@ -57,6 +85,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown)
+  stopCapture()
   if (rufflePlayer) {
     rufflePlayer.remove()
     rufflePlayer = null
@@ -64,7 +93,7 @@ onUnmounted(() => {
 })
 
 watch(() => props.gameState.gameFile, (newFile) => {
-  if (newFile && playerContainer.value) {
+  if (isHost.value && newFile && playerContainer.value) {
     createPlayer()
   }
 })
@@ -100,9 +129,42 @@ function createPlayer() {
   // Load the SWF
   rufflePlayer.load(`/flash/${props.gameState.gameFile}`)
 
-  // If not host, disable interaction
-  if (!isHost.value) {
-    rufflePlayer.style.pointerEvents = 'none'
+  // Start capturing frames after a short delay to let the game load
+  setTimeout(() => {
+    startCapture()
+  }, 1000)
+}
+
+function startCapture() {
+  if (captureInterval) return
+
+  // Capture at ~8 fps for reasonable bandwidth
+  captureInterval = setInterval(() => {
+    captureFrame()
+  }, 125)
+}
+
+function stopCapture() {
+  if (captureInterval) {
+    clearInterval(captureInterval)
+    captureInterval = null
+  }
+}
+
+function captureFrame() {
+  if (!rufflePlayer) return
+
+  try {
+    // Find the canvas inside the Ruffle player
+    const canvas = rufflePlayer.querySelector('canvas')
+    if (!canvas) return
+
+    // Convert to data URL with reduced quality for bandwidth
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.6)
+    emit('frame', dataUrl)
+  } catch (e) {
+    // Canvas might not be ready or cross-origin issues
+    console.warn('Frame capture failed:', e)
   }
 }
 
@@ -115,6 +177,7 @@ function handleKeydown(e) {
 }
 
 function handleQuit() {
+  stopCapture()
   emit('quit')
 }
 </script>
@@ -169,6 +232,26 @@ function handleQuit() {
 .player-container {
   width: 100%;
   height: 400px;
+}
+
+.spectator-view {
+  width: 100%;
+  height: 400px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stream-frame {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.loading-stream {
+  color: #888888;
+  font-size: 0.9em;
 }
 
 .spectator-notice {
