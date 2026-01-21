@@ -114,13 +114,15 @@ async function handleUpdate() {
   } catch (e) {
     // Server will restart, connection will be lost temporarily
   }
-  // Wait for server to come back up, then refresh iframe
+  // Wait for server to come back up, then hard refresh to get new client code
   await waitForServer()
+  // Force hard refresh with cache bust to load any client changes
+  const url = new URL(window.location.href)
+  url.searchParams.set('_t', Date.now())
   if (window.parent !== window) {
     window.parent.postMessage('refresh', '*')
-  } else {
-    window.location.reload()
   }
+  window.location.href = url.toString()
 }
 
 async function waitForServer() {
