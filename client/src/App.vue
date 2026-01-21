@@ -289,7 +289,12 @@ onMounted(() => {
   })
 
   socket.value.on('bj_action', (data) => {
-    if (data.hand && gameState.blackjack.hands[data.player]) {
+    if (data.action === 'split' && data.hands && gameState.blackjack.hands[data.player]) {
+      // Handle split - update with first hand, store split info
+      gameState.blackjack.hands[data.player].cards = data.hands[0].cards
+      gameState.blackjack.hands[data.player].value = data.hands[0].value
+      gameState.blackjack.hands[data.player].splitHands = data.hands
+    } else if (data.hand && gameState.blackjack.hands[data.player]) {
       gameState.blackjack.hands[data.player].cards = data.hand
       gameState.blackjack.hands[data.player].value = data.handValue
     }

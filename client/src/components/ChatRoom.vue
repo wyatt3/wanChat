@@ -10,23 +10,9 @@
         <span class="user-count">{{ users.length }} user{{ users.length !== 1 ? 's' : '' }} online</span>
       </div>
     </div>
-    <div class="main-content">
-      <MessageList :messages="messages" />
-      <div class="sidebar">
-        <div class="sidebar-header">Online Users</div>
-        <ul class="user-list">
-          <li v-for="user in users" :key="user" class="user-item">
-            <span class="user-indicator">></span>
-            <span :style="{ color: getUserColor(user) }">{{ user }}</span>
-            <span v-if="balances[user]" class="user-balance">${{ balances[user] }}</span>
-          </li>
-        </ul>
-      </div>
-    </div>
-    <CommandInput :username="username" @send="handleSend" />
 
-    <!-- Game Overlays -->
-    <div v-if="gameState.activeGame" class="game-overlay">
+    <!-- Game Panel (above chat) -->
+    <div v-if="gameState.activeGame" class="game-panel">
       <BlackjackTable
         v-if="gameState.activeGame === 'blackjack'"
         :gameState="gameState.blackjack"
@@ -47,6 +33,21 @@
         @quit="handleSnakeQuit"
       />
     </div>
+
+    <div class="main-content">
+      <MessageList :messages="messages" />
+      <div class="sidebar">
+        <div class="sidebar-header">Online Users</div>
+        <ul class="user-list">
+          <li v-for="user in users" :key="user" class="user-item">
+            <span class="user-indicator">></span>
+            <span :style="{ color: getUserColor(user) }">{{ user }}</span>
+            <span v-if="balances[user]" class="user-balance">${{ balances[user] }}</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <CommandInput :username="username" @send="handleSend" />
   </div>
 </template>
 
@@ -241,18 +242,13 @@ async function waitForServer() {
   cursor: not-allowed;
 }
 
-.game-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.95);
-  z-index: 100;
+.game-panel {
+  border-bottom: 1px solid var(--border-color);
+  padding: 15px;
+  background: var(--header-bg);
   display: flex;
-  align-items: center;
   justify-content: center;
-  padding: 20px;
-  overflow: auto;
+  max-height: 50vh;
+  overflow-y: auto;
 }
 </style>

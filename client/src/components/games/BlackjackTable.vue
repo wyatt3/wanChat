@@ -74,21 +74,43 @@
             <span v-if="playerName === username" class="you-label">(YOU)</span>
             <span v-if="gameState.currentTurn === playerName" class="turn-indicator">◀</span>
           </div>
-          <div class="cards-row">
-            <div
-              v-for="(card, idx) in hand.cards"
-              :key="playerName + '-' + idx"
-              class="card"
-              :class="{ red: card.isRed }"
-            >
-              {{ card.display }}
+          <!-- Show split hands if player has split -->
+          <template v-if="hand.splitHands && hand.splitHands.length > 1">
+            <div v-for="(splitHand, handIdx) in hand.splitHands" :key="'split-' + handIdx" class="split-hand">
+              <div class="split-label">Hand {{ handIdx + 1 }}</div>
+              <div class="cards-row">
+                <div
+                  v-for="(card, idx) in splitHand.cards"
+                  :key="playerName + '-split-' + handIdx + '-' + idx"
+                  class="card"
+                  :class="{ red: card.isRed }"
+                >
+                  {{ card.display }}
+                </div>
+              </div>
+              <div class="hand-info">
+                <span class="hand-value">{{ splitHand.value }}</span>
+              </div>
             </div>
-          </div>
-          <div class="hand-info">
-            <span class="hand-value">{{ hand.value }}</span>
-            <span class="wager">${{ hand.wager }}</span>
-            <span v-if="hand.blackjack" class="blackjack-badge">BLACKJACK!</span>
-          </div>
+          </template>
+          <!-- Normal single hand -->
+          <template v-else>
+            <div class="cards-row">
+              <div
+                v-for="(card, idx) in hand.cards"
+                :key="playerName + '-' + idx"
+                class="card"
+                :class="{ red: card.isRed }"
+              >
+                {{ card.display }}
+              </div>
+            </div>
+            <div class="hand-info">
+              <span class="hand-value">{{ hand.value }}</span>
+              <span class="wager">${{ hand.wager }}</span>
+              <span v-if="hand.blackjack" class="blackjack-badge">BLACKJACK!</span>
+            </div>
+          </template>
         </div>
       </div>
 
@@ -473,6 +495,25 @@ function formatResult(result) {
   border-radius: 3px;
   font-size: 0.7em;
   font-weight: 600;
+}
+
+.split-hand {
+  margin-bottom: 8px;
+  padding: 8px;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+}
+
+.split-hand:last-child {
+  margin-bottom: 0;
+}
+
+.split-label {
+  font-size: 0.75em;
+  color: #6c757d;
+  margin-bottom: 4px;
+  font-weight: 500;
 }
 
 /* Action Buttons */
