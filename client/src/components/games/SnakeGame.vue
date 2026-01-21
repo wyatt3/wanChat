@@ -1,10 +1,10 @@
 <template>
   <div class="snake-game">
     <div class="game-header">
-      <span class="game-title">SNAKE</span>
+      <span class="game-title">Data Visualization</span>
       <div class="game-stats">
-        <span class="score">Score: {{ gameState.score }}</span>
-        <span class="multiplier">Food: x{{ gameState.foodValue }}</span>
+        <span class="score">Points: {{ gameState.score }}</span>
+        <span class="multiplier">Rate: {{ gameState.foodValue }}x</span>
       </div>
     </div>
 
@@ -17,18 +17,18 @@
       ></canvas>
 
       <div v-if="!isHost" class="spectator-overlay">
-        <p>{{ gameState.host }} is playing</p>
-        <p class="spectator-note">Spectating...</p>
+        <p>{{ gameState.host }} - Active Session</p>
+        <p class="spectator-note">View Only</p>
       </div>
     </div>
 
     <div class="controls-info">
       <template v-if="isHost">
-        <p>Controls: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or Arrow Keys</p>
-        <button @click="handleQuit" class="quit-btn">Quit Game (Q)</button>
+        <p>Navigate: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or Arrow Keys</p>
+        <button @click="handleQuit" class="quit-btn">Close (Q)</button>
       </template>
       <template v-else>
-        <p>Watching {{ gameState.host }} play...</p>
+        <p>Viewing {{ gameState.host }}'s session...</p>
       </template>
     </div>
   </div>
@@ -90,13 +90,13 @@ function draw() {
   const width = canvasWidth.value
   const height = canvasHeight.value
 
-  // Clear canvas
-  ctx.fillStyle = '#1a1a2e'
+  // Clear canvas - light spreadsheet background
+  ctx.fillStyle = '#ffffff'
   ctx.fillRect(0, 0, width, height)
 
-  // Draw grid
-  ctx.strokeStyle = '#2a2a4a'
-  ctx.lineWidth = 0.5
+  // Draw grid - subtle gray lines
+  ctx.strokeStyle = '#e9ecef'
+  ctx.lineWidth = 1
   for (let x = 0; x <= props.gameState.width; x++) {
     ctx.beginPath()
     ctx.moveTo(x * cellSize, 0)
@@ -110,63 +110,39 @@ function draw() {
     ctx.stroke()
   }
 
-  // Draw food
+  // Draw food - looks like a data point
   if (props.gameState.food) {
     const fx = props.gameState.food.x * cellSize
     const fy = props.gameState.food.y * cellSize
 
-    // Draw apple
-    ctx.fillStyle = '#ef4444'
-    ctx.beginPath()
-    ctx.arc(fx + cellSize / 2, fy + cellSize / 2, cellSize / 2 - 2, 0, Math.PI * 2)
-    ctx.fill()
-
-    // Apple stem
-    ctx.fillStyle = '#65a30d'
-    ctx.fillRect(fx + cellSize / 2 - 1, fy + 1, 2, 4)
+    // Draw as a simple square marker
+    ctx.fillStyle = '#dc3545'
+    ctx.fillRect(fx + 3, fy + 3, cellSize - 6, cellSize - 6)
   }
 
-  // Draw snake
+  // Draw snake - looks like a chart line/bars
   if (props.gameState.body && props.gameState.body.length > 0) {
     props.gameState.body.forEach((segment, index) => {
       const sx = segment.x * cellSize
       const sy = segment.y * cellSize
 
       if (index === 0) {
-        // Head - darker green
-        ctx.fillStyle = '#15803d'
+        // Head - darker blue
+        ctx.fillStyle = '#0d6efd'
       } else {
-        // Body - lighter green gradient
-        const brightness = Math.max(0.4, 1 - index * 0.03)
-        ctx.fillStyle = `rgba(74, 222, 128, ${brightness})`
+        // Body - gradient blue
+        const brightness = Math.max(0.4, 1 - index * 0.02)
+        ctx.fillStyle = `rgba(13, 110, 253, ${brightness})`
       }
 
-      // Draw rounded rectangle for segment
-      const padding = 1
-      ctx.beginPath()
-      ctx.roundRect(
+      // Draw simple rectangle
+      const padding = 2
+      ctx.fillRect(
         sx + padding,
         sy + padding,
         cellSize - padding * 2,
-        cellSize - padding * 2,
-        3
+        cellSize - padding * 2
       )
-      ctx.fill()
-
-      // Draw eyes on head
-      if (index === 0) {
-        ctx.fillStyle = 'white'
-        ctx.beginPath()
-        ctx.arc(sx + cellSize * 0.35, sy + cellSize * 0.35, 2, 0, Math.PI * 2)
-        ctx.arc(sx + cellSize * 0.65, sy + cellSize * 0.35, 2, 0, Math.PI * 2)
-        ctx.fill()
-
-        ctx.fillStyle = 'black'
-        ctx.beginPath()
-        ctx.arc(sx + cellSize * 0.35, sy + cellSize * 0.35, 1, 0, Math.PI * 2)
-        ctx.arc(sx + cellSize * 0.65, sy + cellSize * 0.35, 1, 0, Math.PI * 2)
-        ctx.fill()
-      }
     })
   }
 }
@@ -214,54 +190,55 @@ function handleQuit() {
 .snake-game {
   width: 100%;
   max-width: 500px;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  border-radius: 20px;
-  padding: 20px;
-  color: white;
-  font-family: inherit;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 16px;
+  color: #212529;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .game-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
+  margin-bottom: 12px;
   padding-bottom: 10px;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+  border-bottom: 1px solid #dee2e6;
 }
 
 .game-title {
-  font-size: 1.5em;
-  font-weight: bold;
-  color: #4ade80;
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #495057;
 }
 
 .game-stats {
   display: flex;
-  gap: 20px;
+  gap: 16px;
+  font-size: 0.9em;
 }
 
 .score {
-  color: #ffd700;
-  font-weight: bold;
+  color: #495057;
 }
 
 .multiplier {
-  color: #f472b6;
+  color: #6c757d;
 }
 
 .game-container {
   position: relative;
   display: flex;
   justify-content: center;
-  background: #0f0f1a;
-  border-radius: 10px;
-  padding: 10px;
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 8px;
 }
 
 .game-canvas {
-  border-radius: 5px;
   display: block;
 }
 
@@ -271,50 +248,57 @@ function handleQuit() {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(255, 255, 255, 0.9);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
+  border-radius: 4px;
+}
+
+.spectator-overlay p {
+  color: #495057;
 }
 
 .spectator-note {
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 0.9em;
+  color: #6c757d;
+  font-size: 0.85em;
 }
 
 .controls-info {
-  margin-top: 15px;
+  margin-top: 12px;
   text-align: center;
-  color: rgba(255, 255, 255, 0.7);
+  color: #6c757d;
+  font-size: 0.9em;
 }
 
 .controls-info p {
-  margin: 5px 0;
+  margin: 4px 0;
 }
 
 kbd {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 4px;
-  padding: 2px 8px;
-  margin: 0 3px;
+  background: #e9ecef;
+  border: 1px solid #ced4da;
+  border-radius: 3px;
+  padding: 2px 6px;
+  margin: 0 2px;
   font-family: inherit;
+  font-size: 0.85em;
 }
 
 .quit-btn {
-  margin-top: 10px;
-  background: #ef4444;
+  margin-top: 8px;
+  background: #6c757d;
   color: white;
   border: none;
-  padding: 8px 20px;
-  border-radius: 6px;
+  padding: 6px 16px;
+  border-radius: 4px;
   cursor: pointer;
-  font-weight: bold;
+  font-weight: 500;
+  font-size: 0.9em;
 }
 
 .quit-btn:hover {
-  background: #dc2626;
+  background: #5c636a;
 }
 </style>

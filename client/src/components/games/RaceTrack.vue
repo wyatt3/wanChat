@@ -1,7 +1,7 @@
 <template>
   <div class="race-track">
     <div class="track-header">
-      <span class="game-title">HORSE RACE</span>
+      <span class="game-title">Project Timeline</span>
       <span class="phase-indicator">{{ phaseText }}</span>
     </div>
 
@@ -16,25 +16,25 @@
         <div class="lane-info">
           <span class="horse-number">{{ idx + 1 }}</span>
           <span class="horse-name">{{ horse.name }}</span>
-          <span class="horse-odds">({{ horse.odds }}:1)</span>
+          <span class="horse-odds">({{ horse.odds }}x)</span>
         </div>
         <div class="lane-track">
           <div
             class="horse-icon"
-            :style="{ left: `${gameState.positions[idx]}%` }"
+            :style="{ left: `calc(${gameState.positions[idx]}% - 8px)` }"
           >
-            🏇
+            ▶
           </div>
-          <div class="finish-line">🏁</div>
+          <div class="finish-line">|</div>
         </div>
       </div>
     </div>
 
     <!-- Betting Phase -->
     <div v-if="gameState.phase === 'betting'" class="betting-section">
-      <p>{{ gameState.host }} is starting a horse race!</p>
+      <p>{{ gameState.host }} initiated resource allocation</p>
       <template v-if="!hasActed">
-        <p>Select a horse and enter your bet amount:</p>
+        <p>Select priority and enter allocation:</p>
         <div class="bet-options">
           <div
             v-for="(horse, idx) in gameState.horses"
@@ -45,7 +45,7 @@
           >
             <span class="opt-number">{{ idx + 1 }}</span>
             <span class="opt-name">{{ horse.name }}</span>
-            <span class="opt-odds">{{ horse.odds }}:1</span>
+            <span class="opt-odds">{{ horse.odds }}x</span>
           </div>
         </div>
         <div class="bet-amount-section">
@@ -64,26 +64,26 @@
             class="place-bet-btn"
             :disabled="!selectedHorse || !betAmount"
           >
-            Place Bet
+            Submit
           </button>
-          <button @click="pass" class="pass-btn">Pass</button>
+          <button @click="pass" class="pass-btn">Skip</button>
         </div>
       </template>
       <div v-else class="waiting-message">
-        <div class="waiting-icon">🏇</div>
-        <p>Waiting for other players...</p>
+        <div class="waiting-icon">○</div>
+        <p>Awaiting other responses...</p>
       </div>
     </div>
 
     <!-- Running Phase -->
     <div v-if="gameState.phase === 'running'" class="running-section">
-      <div class="race-status">AND THEY'RE OFF!</div>
+      <div class="race-status">Processing...</div>
     </div>
 
     <!-- Results Phase -->
     <div v-if="gameState.phase === 'result' && gameState.results" class="results-section">
       <div class="winner-announcement">
-        🏆 {{ gameState.horses[gameState.winner]?.name }} WINS! 🏆
+        {{ gameState.horses[gameState.winner]?.name }} - Completed
       </div>
       <div class="results-list">
         <div v-for="result in gameState.results" :key="result.player" class="result-item">
@@ -123,9 +123,9 @@ const hasActed = ref(false)
 const phaseText = computed(() => {
   switch (props.gameState.phase) {
     case 'betting':
-      return 'Place your bets!'
+      return 'Pending Input'
     case 'running':
-      return 'Race in progress...'
+      return 'In Progress'
     case 'result':
       return 'Race finished!'
     default:
@@ -149,49 +149,51 @@ function pass() {
 <style scoped>
 .race-track {
   width: 100%;
-  max-width: 700px;
-  background: linear-gradient(135deg, #2d1f1f 0%, #4a3333 100%);
-  border-radius: 20px;
+  max-width: 600px;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
   padding: 20px;
-  color: white;
-  font-family: inherit;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  color: #212529;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .track-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 10px;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #dee2e6;
 }
 
 .game-title {
-  font-size: 1.5em;
-  font-weight: bold;
-  color: #ffd700;
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #495057;
 }
 
 .phase-indicator {
-  color: rgba(255, 255, 255, 0.8);
+  color: #6c757d;
+  font-size: 0.9em;
 }
 
 /* Track */
 .track-container {
-  background: #3d5c3d;
-  border-radius: 10px;
-  padding: 15px;
-  margin-bottom: 20px;
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 12px;
+  margin-bottom: 16px;
 }
 
 .track-lane {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 0;
-  border-bottom: 1px dashed rgba(255, 255, 255, 0.2);
-  transition: background 0.3s;
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f3f4;
 }
 
 .track-lane:last-child {
@@ -199,11 +201,11 @@ function pass() {
 }
 
 .track-lane.winner {
-  background: rgba(255, 215, 0, 0.2);
+  background: #e8f5e9;
 }
 
 .lane-info {
-  width: 140px;
+  width: 130px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -211,32 +213,34 @@ function pass() {
 }
 
 .horse-number {
-  background: #ffd700;
-  color: #1a1a1a;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
+  background: #e9ecef;
+  color: #495057;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
-  font-size: 0.9em;
+  font-weight: 600;
+  font-size: 0.8em;
 }
 
 .horse-name {
-  font-weight: bold;
+  font-weight: 500;
+  font-size: 0.9em;
+  color: #212529;
 }
 
 .horse-odds {
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 0.85em;
+  color: #6c757d;
+  font-size: 0.8em;
 }
 
 .lane-track {
   flex: 1;
-  height: 30px;
-  background: #2a472a;
-  border-radius: 5px;
+  height: 20px;
+  background: #e9ecef;
+  border-radius: 3px;
   position: relative;
   overflow: hidden;
 }
@@ -245,16 +249,18 @@ function pass() {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 1.5em;
+  font-size: 0.8em;
+  color: #0d6efd;
   transition: left 0.15s linear;
 }
 
 .finish-line {
   position: absolute;
-  right: 5px;
+  right: 4px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 1.2em;
+  font-size: 0.9em;
+  color: #adb5bd;
 }
 
 /* Betting Section */
@@ -263,211 +269,213 @@ function pass() {
 }
 
 .betting-section p {
-  margin: 10px 0;
+  margin: 8px 0;
+  color: #495057;
 }
 
 .bet-options {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin: 15px 0;
+  gap: 4px;
+  margin: 12px 0;
 }
 
 .bet-option {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 15px;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 8px;
+  padding: 8px 12px;
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
-  border: 2px solid transparent;
 }
 
 .bet-option:hover {
-  background: rgba(0, 0, 0, 0.3);
+  background: #f8f9fa;
 }
 
 .bet-option.selected {
-  border-color: #ffd700;
-  background: rgba(255, 215, 0, 0.1);
+  border-color: #0d6efd;
+  background: #f8f9ff;
 }
 
 .opt-number {
-  background: #ffd700;
-  color: #1a1a1a;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+  background: #e9ecef;
+  color: #495057;
+  width: 24px;
+  height: 24px;
+  border-radius: 3px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
+  font-weight: 600;
+  font-size: 0.85em;
 }
 
 .opt-name {
   flex: 1;
   text-align: left;
-  font-weight: bold;
+  font-weight: 500;
+  color: #212529;
 }
 
 .opt-odds {
-  color: rgba(255, 255, 255, 0.6);
+  color: #6c757d;
+  font-size: 0.85em;
 }
 
 .bet-amount-section {
   display: flex;
-  gap: 5px;
+  gap: 4px;
   align-items: center;
   justify-content: center;
-  margin: 15px 0;
+  margin: 12px 0;
 }
 
 .dollar-sign {
-  font-size: 1.2em;
-  color: #ffd700;
+  font-size: 1em;
+  color: #495057;
 }
 
 .bet-input {
-  width: 100px;
-  padding: 10px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.3);
-  color: white;
+  width: 80px;
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background: #fff;
+  color: #212529;
   font-size: 1em;
   text-align: center;
 }
 
 .bet-input:focus {
   outline: none;
-  border-color: #ffd700;
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.15);
 }
 
 .bet-actions {
   display: flex;
-  gap: 15px;
+  gap: 8px;
   justify-content: center;
-  margin-top: 15px;
+  margin-top: 12px;
 }
 
 .place-bet-btn {
-  background: #4ade80;
-  color: #1a1a1a;
+  background: #0d6efd;
+  color: white;
   border: none;
-  padding: 12px 30px;
-  border-radius: 8px;
-  font-weight: bold;
-  font-size: 1em;
+  padding: 8px 20px;
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 0.9em;
   cursor: pointer;
-  transition: transform 0.1s, background 0.2s;
 }
 
 .place-bet-btn:hover:not(:disabled) {
-  background: #22c55e;
-  transform: scale(1.05);
+  background: #0b5ed7;
 }
 
 .place-bet-btn:disabled {
-  opacity: 0.5;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
 .pass-btn {
-  background: #6b7280;
+  background: #6c757d;
   color: white;
   border: none;
-  padding: 12px 30px;
-  border-radius: 8px;
-  font-weight: bold;
-  font-size: 1em;
+  padding: 8px 20px;
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 0.9em;
   cursor: pointer;
 }
 
 .pass-btn:hover {
-  background: #4b5563;
+  background: #5c636a;
 }
 
 .waiting-message {
   text-align: center;
-  padding: 30px;
+  padding: 20px;
 }
 
 .waiting-icon {
-  font-size: 3em;
-  margin-bottom: 15px;
-  animation: trot 0.5s ease-in-out infinite;
+  font-size: 1.5em;
+  margin-bottom: 10px;
+  color: #6c757d;
+  animation: spin 2s linear infinite;
 }
 
-@keyframes trot {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .waiting-message p {
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 1.1em;
+  color: #6c757d;
+  font-size: 0.95em;
 }
 
 /* Running */
 .running-section {
   text-align: center;
-  padding: 20px;
+  padding: 16px;
 }
 
 .race-status {
-  font-size: 1.5em;
-  font-weight: bold;
-  color: #ffd700;
-  animation: shake 0.3s infinite;
-}
-
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-5px); }
-  75% { transform: translateX(5px); }
+  font-size: 1em;
+  color: #6c757d;
 }
 
 /* Results */
 .results-section {
   text-align: center;
-  padding: 15px;
+  padding: 12px;
 }
 
 .winner-announcement {
-  font-size: 1.3em;
-  font-weight: bold;
-  color: #ffd700;
-  margin-bottom: 15px;
-  padding: 10px;
-  background: rgba(255, 215, 0, 0.1);
-  border-radius: 10px;
+  font-size: 1em;
+  font-weight: 600;
+  color: #198754;
+  margin-bottom: 12px;
+  padding: 8px;
+  background: #e8f5e9;
+  border: 1px solid #c8e6c9;
+  border-radius: 4px;
 }
 
 .results-list {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 10px;
-  padding: 10px;
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 8px;
 }
 
 .result-item {
   display: flex;
   justify-content: space-between;
-  padding: 8px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 6px 8px;
+  border-bottom: 1px solid #f1f3f4;
+  font-size: 0.9em;
 }
 
 .result-item:last-child {
   border-bottom: none;
 }
 
+.result-player {
+  color: #495057;
+}
+
 .result-outcome.win {
-  color: #4ade80;
-  font-weight: bold;
+  color: #198754;
+  font-weight: 500;
 }
 
 .result-outcome.lose {
-  color: #ef4444;
+  color: #dc3545;
 }
 </style>

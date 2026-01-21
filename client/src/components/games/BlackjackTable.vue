@@ -1,15 +1,15 @@
 <template>
   <div class="blackjack-table">
     <div class="table-header">
-      <span class="game-title">BLACKJACK</span>
+      <span class="game-title">Q4 Budget Review</span>
       <span class="phase-indicator">{{ phaseText }}</span>
     </div>
 
     <!-- Betting Phase -->
     <div v-if="gameState.phase === 'betting'" class="betting-phase">
-      <p>{{ gameState.host }} is starting a game of Blackjack!</p>
+      <p>{{ gameState.host }} initiated budget allocation request</p>
       <template v-if="!hasActed">
-        <p>Enter your bet amount to join</p>
+        <p>Enter allocation amount:</p>
         <div class="bet-input-section">
           <span class="dollar-sign">$</span>
           <input
@@ -22,13 +22,13 @@
           />
         </div>
         <div class="bet-actions">
-          <button @click="placeBet" class="bet-btn" :disabled="!betAmount || betAmount < 1">Place Bet</button>
-          <button @click="fold" class="fold-btn">Fold</button>
+          <button @click="placeBet" class="bet-btn" :disabled="!betAmount || betAmount < 1">Submit</button>
+          <button @click="fold" class="fold-btn">Decline</button>
         </div>
       </template>
       <div v-else class="waiting-message">
-        <div class="waiting-icon">⏳</div>
-        <p>Waiting for other players...</p>
+        <div class="waiting-icon">○</div>
+        <p>Awaiting other approvals...</p>
       </div>
     </div>
 
@@ -36,7 +36,7 @@
     <div v-if="gameState.phase === 'playing' || gameState.phase === 'result'" class="playing-phase">
       <!-- Dealer Section -->
       <div class="dealer-section">
-        <div class="section-label">DEALER</div>
+        <div class="section-label">OVERHEAD</div>
         <div class="cards-row">
           <template v-if="gameState.dealerHand">
             <div
@@ -102,35 +102,35 @@
           @click="action('hit')"
           class="action-btn hit"
         >
-          HIT
+          Add Item
         </button>
         <button
           v-if="gameState.options.includes('stand')"
           @click="action('stand')"
           class="action-btn stand"
         >
-          STAND
+          Finalize
         </button>
         <button
           v-if="gameState.options.includes('double')"
           @click="action('double')"
           class="action-btn double"
         >
-          DOUBLE
+          Double
         </button>
         <button
           v-if="gameState.options.includes('split')"
           @click="action('split')"
           class="action-btn split"
         >
-          SPLIT
+          Split
         </button>
       </div>
     </div>
 
     <!-- Results Phase -->
     <div v-if="gameState.phase === 'result' && gameState.results" class="results-section">
-      <div class="results-header">RESULTS</div>
+      <div class="results-header">Summary Report</div>
       <div v-for="result in gameState.results" :key="result.player" class="result-item">
         <span class="result-player">{{ result.player }}</span>
         <span
@@ -170,11 +170,11 @@ const hasActed = ref(false)
 const phaseText = computed(() => {
   switch (props.gameState.phase) {
     case 'betting':
-      return 'Place your bets!'
+      return 'Pending Approval'
     case 'playing':
-      return props.gameState.currentTurn ? `${props.gameState.currentTurn}'s turn` : 'Playing...'
+      return props.gameState.currentTurn ? `Awaiting ${props.gameState.currentTurn}` : 'Processing...'
     case 'result':
-      return 'Game Over'
+      return 'Complete'
     default:
       return ''
   }
@@ -199,13 +199,13 @@ function action(act) {
 function formatResult(result) {
   switch (result.result) {
     case 'blackjack':
-      return `BLACKJACK! +$${result.payout - result.wager}`
+      return `Bonus +$${result.payout - result.wager}`
     case 'win':
-      return `Won +$${result.payout - result.wager}`
+      return `Approved +$${result.payout - result.wager}`
     case 'push':
-      return 'Push (tie)'
+      return 'No Change'
     case 'lose':
-      return `Lost -$${result.wager}`
+      return `Denied -$${result.wager}`
     default:
       return result.result
   }
@@ -216,338 +216,371 @@ function formatResult(result) {
 .blackjack-table {
   width: 100%;
   max-width: 700px;
-  background: linear-gradient(135deg, #1a472a 0%, #2d5a3f 100%);
-  border-radius: 20px;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
   padding: 20px;
-  color: white;
-  font-family: inherit;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  color: #212529;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .table-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 10px;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #dee2e6;
 }
 
 .game-title {
-  font-size: 1.5em;
-  font-weight: bold;
-  color: #ffd700;
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #495057;
 }
 
 .phase-indicator {
-  color: rgba(255, 255, 255, 0.8);
+  color: #6c757d;
+  font-size: 0.9em;
 }
 
 /* Betting Phase */
 .betting-phase {
   text-align: center;
-  padding: 20px;
+  padding: 16px;
 }
 
 .betting-phase p {
-  margin: 10px 0;
+  margin: 8px 0;
+  color: #495057;
 }
 
 .bet-input-section {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  margin: 20px 0;
+  gap: 4px;
+  margin: 16px 0;
 }
 
 .dollar-sign {
-  font-size: 1.2em;
-  color: #4ade80;
+  font-size: 1em;
+  color: #495057;
 }
 
 .bet-input {
-  width: 120px;
-  padding: 10px 15px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.3);
-  color: white;
-  font-size: 1.2em;
+  width: 100px;
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background: #fff;
+  color: #212529;
+  font-size: 1em;
   text-align: center;
 }
 
 .bet-input:focus {
   outline: none;
-  border-color: #4ade80;
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.15);
 }
 
 .bet-actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   justify-content: center;
-  margin-top: 20px;
-  flex-wrap: wrap;
+  margin-top: 16px;
 }
 
 .bet-btn {
-  background: #4ade80;
-  color: #1a1a1a;
+  background: #0d6efd;
+  color: white;
   border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-weight: bold;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: 500;
   cursor: pointer;
-  transition: transform 0.1s, background 0.2s;
+  font-size: 0.9em;
 }
 
 .bet-btn:hover:not(:disabled) {
-  background: #22c55e;
-  transform: scale(1.05);
+  background: #0b5ed7;
 }
 
 .bet-btn:disabled {
-  opacity: 0.5;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
 .fold-btn {
-  background: #ef4444;
+  background: #6c757d;
   color: white;
   border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-weight: bold;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: 500;
   cursor: pointer;
+  font-size: 0.9em;
 }
 
 .fold-btn:hover {
-  background: #dc2626;
+  background: #5c636a;
 }
 
 .waiting-message {
   text-align: center;
-  padding: 30px;
+  padding: 24px;
 }
 
 .waiting-icon {
-  font-size: 3em;
-  margin-bottom: 15px;
-  animation: bounce 1s ease-in-out infinite;
+  font-size: 1.5em;
+  margin-bottom: 12px;
+  color: #6c757d;
+  animation: spin 2s linear infinite;
 }
 
-@keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .waiting-message p {
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 1.1em;
+  color: #6c757d;
+  font-size: 0.95em;
 }
 
 /* Playing Phase */
 .playing-phase {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
 .dealer-section,
 .players-section {
-  padding: 15px;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
 }
 
 .section-label {
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 0.9em;
-  margin-bottom: 10px;
+  color: #6c757d;
+  font-size: 0.8em;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
 }
 
 .cards-row {
   display: flex;
-  gap: 8px;
+  gap: 4px;
   flex-wrap: wrap;
 }
 
 .card {
-  width: 50px;
-  height: 70px;
-  background: white;
-  border-radius: 6px;
+  width: 36px;
+  height: 28px;
+  background: #e9ecef;
+  border: 1px solid #ced4da;
+  border-radius: 3px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.2em;
-  font-weight: bold;
-  color: #1a1a1a;
-  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+  font-size: 0.85em;
+  font-weight: 600;
+  color: #212529;
 }
 
 .card.red {
-  color: #dc2626;
+  color: #dc3545;
 }
 
 .card.back {
-  background: linear-gradient(45deg, #1e3a5f 25%, #2a4a6f 25%, #2a4a6f 50%, #1e3a5f 50%, #1e3a5f 75%, #2a4a6f 75%);
-  background-size: 10px 10px;
-  color: transparent;
+  background: #adb5bd;
+  color: #6c757d;
 }
 
 .hand-value {
-  margin-top: 8px;
-  font-size: 1.1em;
-  color: #ffd700;
+  margin-top: 6px;
+  font-size: 0.9em;
+  color: #495057;
+  font-weight: 600;
 }
 
 /* Players */
 .players-section {
   display: flex;
-  gap: 20px;
+  gap: 12px;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .player-hand {
-  background: rgba(0, 0, 0, 0.2);
-  padding: 15px;
-  border-radius: 10px;
-  min-width: 150px;
-  border: 2px solid transparent;
-  transition: border-color 0.3s;
+  background: #fff;
+  padding: 12px;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  min-width: 140px;
 }
 
 .player-hand.current-turn {
-  border-color: #ffd700;
-  box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+  border-color: #0d6efd;
+  background: #f8f9ff;
 }
 
 .player-hand.is-you {
-  background: rgba(74, 222, 128, 0.15);
+  border-color: #198754;
+  background: #f8fff9;
 }
 
 .player-name {
-  font-weight: bold;
-  margin-bottom: 10px;
+  font-weight: 600;
+  margin-bottom: 8px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  font-size: 0.9em;
+  color: #212529;
 }
 
 .you-label {
-  color: #4ade80;
-  font-size: 0.8em;
+  color: #198754;
+  font-size: 0.75em;
 }
 
 .turn-indicator {
-  color: #ffd700;
-  animation: pulse 1s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  color: #0d6efd;
 }
 
 .hand-info {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
-  margin-top: 8px;
+  margin-top: 6px;
+  font-size: 0.85em;
 }
 
 .wager {
-  color: #4ade80;
-  font-size: 0.9em;
+  color: #198754;
 }
 
 .blackjack-badge {
-  background: #ffd700;
-  color: #1a1a1a;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 0.8em;
-  font-weight: bold;
+  background: #198754;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.7em;
+  font-weight: 600;
 }
 
 /* Action Buttons */
 .action-buttons {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   justify-content: center;
-  margin-top: 20px;
+  margin-top: 16px;
 }
 
 .action-btn {
-  padding: 12px 24px;
-  border: none;
-  border-radius: 8px;
-  font-weight: bold;
-  font-size: 1em;
+  padding: 8px 16px;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 0.9em;
   cursor: pointer;
-  transition: transform 0.1s, opacity 0.2s;
+  background: #fff;
+  color: #212529;
 }
 
 .action-btn:hover {
-  transform: scale(1.05);
+  background: #e9ecef;
 }
 
 .action-btn.hit {
-  background: #3b82f6;
+  background: #0d6efd;
+  border-color: #0d6efd;
   color: white;
+}
+
+.action-btn.hit:hover {
+  background: #0b5ed7;
 }
 
 .action-btn.stand {
-  background: #f59e0b;
+  background: #198754;
+  border-color: #198754;
   color: white;
+}
+
+.action-btn.stand:hover {
+  background: #157347;
 }
 
 .action-btn.double {
-  background: #8b5cf6;
+  background: #6c757d;
+  border-color: #6c757d;
   color: white;
 }
 
+.action-btn.double:hover {
+  background: #5c636a;
+}
+
 .action-btn.split {
-  background: #ec4899;
+  background: #6c757d;
+  border-color: #6c757d;
   color: white;
+}
+
+.action-btn.split:hover {
+  background: #5c636a;
 }
 
 /* Results */
 .results-section {
-  margin-top: 20px;
-  padding: 15px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 10px;
+  margin-top: 16px;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
 }
 
 .results-header {
-  text-align: center;
-  font-size: 1.2em;
-  font-weight: bold;
-  color: #ffd700;
-  margin-bottom: 15px;
+  font-size: 0.9em;
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #dee2e6;
 }
 
 .result-item {
   display: flex;
   justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 6px 0;
+  border-bottom: 1px solid #f1f3f4;
+  font-size: 0.9em;
 }
 
 .result-item:last-child {
   border-bottom: none;
 }
 
+.result-player {
+  color: #495057;
+}
+
 .result-outcome.win {
-  color: #4ade80;
+  color: #198754;
 }
 
 .result-outcome.lose {
-  color: #ef4444;
+  color: #dc3545;
 }
 
 .result-outcome.push {
-  color: #f59e0b;
+  color: #6c757d;
 }
 </style>
