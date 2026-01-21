@@ -12,6 +12,10 @@
       @snake-input="handleSnakeInput"
       @snake-quit="handleSnakeQuit"
     />
+    <!-- Smoke effect overlay -->
+    <div v-if="showSmoke" class="smoke-overlay">
+      <div v-for="n in 20" :key="n" class="smoke-particle" :style="getSmokeStyle(n)"></div>
+    </div>
   </div>
 </template>
 
@@ -27,6 +31,7 @@ const username = ref('')
 const messages = ref([])
 const users = ref([])
 const balances = ref({})
+const showSmoke = ref(false)
 
 // Game state
 const gameState = reactive({
@@ -163,6 +168,28 @@ function playFartSound() {
   }
 }
 
+function triggerSmoke() {
+  showSmoke.value = true
+  setTimeout(() => {
+    showSmoke.value = false
+  }, 4000)
+}
+
+function getSmokeStyle(n) {
+  const delay = Math.random() * 2
+  const duration = 3 + Math.random() * 2
+  const startX = 20 + Math.random() * 60
+  const drift = -30 + Math.random() * 60
+  const size = 30 + Math.random() * 50
+  return {
+    left: `${startX}%`,
+    '--drift': `${drift}px`,
+    '--size': `${size}px`,
+    animationDelay: `${delay}s`,
+    animationDuration: `${duration}s`
+  }
+}
+
 onMounted(() => {
   // Check for saved username
   const savedUsername = localStorage.getItem('wanchat_username')
@@ -245,6 +272,11 @@ onMounted(() => {
   // Handle fart
   socket.value.on('fart', () => {
     playFartSound()
+  })
+
+  // Handle light - show smoke effect
+  socket.value.on('light', () => {
+    triggerSmoke()
   })
 
   // Handle killall
@@ -469,3 +501,44 @@ function handleSnakeQuit() {
   socket.value.emit('snake_quit')
 }
 </script>
+
+<style scoped>
+.smoke-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.smoke-particle {
+  position: absolute;
+  bottom: 0;
+  width: var(--size, 40px);
+  height: var(--size, 40px);
+  background: radial-gradient(ellipse at center, rgba(200, 200, 200, 0.6) 0%, rgba(150, 150, 150, 0.3) 40%, transparent 70%);
+  border-radius: 50%;
+  animation: smoke-rise 4s ease-out forwards;
+  opacity: 0;
+}
+
+@keyframes smoke-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(0) translateX(0) scale(0.5);
+  }
+  10% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-100vh) translateX(var(--drift, 0px)) scale(2);
+  }
+}
+</style>
