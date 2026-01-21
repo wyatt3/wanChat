@@ -148,8 +148,8 @@ function startCapture() {
 function captureLoop(timestamp) {
   if (!captureRunning) return
 
-  // Capture at ~8 fps (every 125ms)
-  if (timestamp - lastCaptureTime >= 125) {
+  // Capture at ~20 fps (every 50ms)
+  if (timestamp - lastCaptureTime >= 50) {
     captureFrame()
     lastCaptureTime = timestamp
   }
