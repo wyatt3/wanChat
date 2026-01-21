@@ -238,13 +238,13 @@ function formatResult(result) {
 .blackjack-table {
   width: 100%;
   max-width: 700px;
-  background: #f8f9fa;
-  border: 1px solid #dee2e6;
+  background: #1a1a1a;
+  border: 1px solid #333333;
   border-radius: 4px;
   padding: 20px;
-  color: #212529;
+  color: #e0e0e0;
   font-family: 'Segoe UI', system-ui, sans-serif;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .table-header {
@@ -253,17 +253,17 @@ function formatResult(result) {
   align-items: center;
   margin-bottom: 16px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #dee2e6;
+  border-bottom: 1px solid #333333;
 }
 
 .game-title {
   font-size: 1.1em;
   font-weight: 600;
-  color: #495057;
+  color: #e0e0e0;
 }
 
 .phase-indicator {
-  color: #6c757d;
+  color: #888888;
   font-size: 0.9em;
 }
 
@@ -275,7 +275,7 @@ function formatResult(result) {
 
 .betting-phase p {
   margin: 8px 0;
-  color: #495057;
+  color: #b0b0b0;
 }
 
 .bet-input-section {
@@ -288,24 +288,24 @@ function formatResult(result) {
 
 .dollar-sign {
   font-size: 1em;
-  color: #495057;
+  color: #b0b0b0;
 }
 
 .bet-input {
   width: 100px;
   padding: 8px 12px;
-  border: 1px solid #ced4da;
+  border: 1px solid #444444;
   border-radius: 4px;
-  background: #fff;
-  color: #212529;
+  background: #252525;
+  color: #e0e0e0;
   font-size: 1em;
   text-align: center;
 }
 
 .bet-input:focus {
   outline: none;
-  border-color: #0d6efd;
-  box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.15);
+  border-color: #00ff00;
+  box-shadow: 0 0 0 2px rgba(0, 255, 0, 0.15);
 }
 
 .bet-actions {
@@ -316,7 +316,7 @@ function formatResult(result) {
 }
 
 .bet-btn {
-  background: #0d6efd;
+  background: #00aa00;
   color: white;
   border: none;
   padding: 8px 16px;
@@ -327,7 +327,7 @@ function formatResult(result) {
 }
 
 .bet-btn:hover:not(:disabled) {
-  background: #0b5ed7;
+  background: #00cc00;
 }
 
 .bet-btn:disabled {
@@ -336,7 +336,7 @@ function formatResult(result) {
 }
 
 .fold-btn {
-  background: #6c757d;
+  background: #555555;
   color: white;
   border: none;
   padding: 8px 16px;
@@ -347,7 +347,7 @@ function formatResult(result) {
 }
 
 .fold-btn:hover {
-  background: #5c636a;
+  background: #666666;
 }
 
 .waiting-message {
@@ -358,7 +358,7 @@ function formatResult(result) {
 .waiting-icon {
   font-size: 1.5em;
   margin-bottom: 12px;
-  color: #6c757d;
+  color: #888888;
   animation: spin 2s linear infinite;
 }
 
@@ -368,7 +368,7 @@ function formatResult(result) {
 }
 
 .waiting-message p {
-  color: #6c757d;
+  color: #888888;
   font-size: 0.95em;
 }
 
@@ -382,13 +382,13 @@ function formatResult(result) {
 .dealer-section,
 .players-section {
   padding: 12px;
-  background: #fff;
-  border: 1px solid #dee2e6;
+  background: #252525;
+  border: 1px solid #333333;
   border-radius: 4px;
 }
 
 .section-label {
-  color: #6c757d;
+  color: #888888;
   font-size: 0.8em;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -404,30 +404,30 @@ function formatResult(result) {
 .card {
   width: 36px;
   height: 28px;
-  background: #e9ecef;
-  border: 1px solid #ced4da;
+  background: #333333;
+  border: 1px solid #444444;
   border-radius: 3px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.85em;
   font-weight: 600;
-  color: #212529;
+  color: #e0e0e0;
 }
 
 .card.red {
-  color: #dc3545;
+  color: #ff4444;
 }
 
 .card.back {
-  background: #adb5bd;
-  color: #6c757d;
+  background: #444444;
+  color: #888888;
 }
 
 .hand-value {
   margin-top: 6px;
   font-size: 0.9em;
-  color: #495057;
+  color: #b0b0b0;
   font-weight: 600;
 }
 
@@ -440,21 +440,21 @@ function formatResult(result) {
 }
 
 .player-hand {
-  background: #fff;
+  background: #252525;
   padding: 12px;
-  border: 1px solid #dee2e6;
+  border: 1px solid #333333;
   border-radius: 4px;
   min-width: 140px;
 }
 
 .player-hand.current-turn {
-  border-color: #0d6efd;
-  background: #f8f9ff;
+  border-color: #3399ff;
+  background: #1a2a3a;
 }
 
 .player-hand.is-you {
-  border-color: #198754;
-  background: #f8fff9;
+  border-color: #00ff00;
+  background: #1a2a1a;
 }
 
 .player-name {
@@ -464,16 +464,16 @@ function formatResult(result) {
   align-items: center;
   gap: 6px;
   font-size: 0.9em;
-  color: #212529;
+  color: #e0e0e0;
 }
 
 .you-label {
-  color: #198754;
+  color: #00ff00;
   font-size: 0.75em;
 }
 
 .turn-indicator {
-  color: #0d6efd;
+  color: #3399ff;
 }
 
 .hand-info {
@@ -485,11 +485,11 @@ function formatResult(result) {
 }
 
 .wager {
-  color: #198754;
+  color: #00ff00;
 }
 
 .blackjack-badge {
-  background: #198754;
+  background: #00aa00;
   color: white;
   padding: 2px 6px;
   border-radius: 3px;
@@ -500,8 +500,8 @@ function formatResult(result) {
 .split-hand {
   margin-bottom: 8px;
   padding: 8px;
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
+  background: #1a1a1a;
+  border: 1px solid #333333;
   border-radius: 4px;
 }
 
@@ -511,7 +511,7 @@ function formatResult(result) {
 
 .split-label {
   font-size: 0.75em;
-  color: #6c757d;
+  color: #888888;
   margin-bottom: 4px;
   font-weight: 500;
 }
@@ -526,82 +526,82 @@ function formatResult(result) {
 
 .action-btn {
   padding: 8px 16px;
-  border: 1px solid #dee2e6;
+  border: 1px solid #333333;
   border-radius: 4px;
   font-weight: 500;
   font-size: 0.9em;
   cursor: pointer;
-  background: #fff;
-  color: #212529;
+  background: #252525;
+  color: #e0e0e0;
 }
 
 .action-btn:hover {
-  background: #e9ecef;
+  background: #333333;
 }
 
 .action-btn.hit {
-  background: #0d6efd;
-  border-color: #0d6efd;
+  background: #3399ff;
+  border-color: #3399ff;
   color: white;
 }
 
 .action-btn.hit:hover {
-  background: #0b5ed7;
+  background: #2288ee;
 }
 
 .action-btn.stand {
-  background: #198754;
-  border-color: #198754;
+  background: #00aa00;
+  border-color: #00aa00;
   color: white;
 }
 
 .action-btn.stand:hover {
-  background: #157347;
+  background: #00cc00;
 }
 
 .action-btn.double {
-  background: #6c757d;
-  border-color: #6c757d;
+  background: #555555;
+  border-color: #555555;
   color: white;
 }
 
 .action-btn.double:hover {
-  background: #5c636a;
+  background: #666666;
 }
 
 .action-btn.split {
-  background: #6c757d;
-  border-color: #6c757d;
+  background: #555555;
+  border-color: #555555;
   color: white;
 }
 
 .action-btn.split:hover {
-  background: #5c636a;
+  background: #666666;
 }
 
 /* Results */
 .results-section {
   margin-top: 16px;
   padding: 12px;
-  background: #fff;
-  border: 1px solid #dee2e6;
+  background: #252525;
+  border: 1px solid #333333;
   border-radius: 4px;
 }
 
 .results-header {
   font-size: 0.9em;
   font-weight: 600;
-  color: #495057;
+  color: #e0e0e0;
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #dee2e6;
+  border-bottom: 1px solid #333333;
 }
 
 .result-item {
   display: flex;
   justify-content: space-between;
   padding: 6px 0;
-  border-bottom: 1px solid #f1f3f4;
+  border-bottom: 1px solid #2a2a2a;
   font-size: 0.9em;
 }
 
@@ -610,18 +610,18 @@ function formatResult(result) {
 }
 
 .result-player {
-  color: #495057;
+  color: #b0b0b0;
 }
 
 .result-outcome.win {
-  color: #198754;
+  color: #00ff00;
 }
 
 .result-outcome.lose {
-  color: #dc3545;
+  color: #ff4444;
 }
 
 .result-outcome.push {
-  color: #6c757d;
+  color: #888888;
 }
 </style>
