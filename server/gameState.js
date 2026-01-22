@@ -16,6 +16,17 @@ class GameState {
     const savedEquipped = persistence.loadEquipped();
     this.equippedTitles = new Map(Object.entries(savedEquipped));
 
+    // Appraisals - keyed by username -> Map of itemId -> { value, appraisedAt }
+    const savedAppraisals = persistence.loadAppraisals();
+    this.appraisals = new Map();
+    for (const [username, items] of Object.entries(savedAppraisals)) {
+      this.appraisals.set(username, new Map(Object.entries(items)));
+    }
+
+    // Pending appraisals - items currently being appraised
+    const savedPending = persistence.loadPendingAppraisals();
+    this.pendingAppraisals = new Map(Object.entries(savedPending));
+
     // Beg tracking
     this.begCounts = new Map(); // username -> count
 
@@ -172,6 +183,66 @@ class GameState {
 
   saveEquipped() {
     persistence.saveEquipped(this.equippedTitles);
+  }
+
+  // Appraisal methods
+  getAppraisedValue(username, itemId) {
+    const userAppraisals = this.appraisals.get(username);
+    if (!userAppraisals) return null;
+    const appraisal = userAppraisals.get(itemId);
+    return appraisal ? appraisal.value : null;
+  }
+
+  setAppraisedValue(username, itemId, value) {
+    if (!this.appraisals.has(username)) {
+      this.appraisals.set(username, new Map());
+    }
+    this.appraisals.get(username).set(itemId, {
+      value: value,
+      appraisedAt: Date.now()
+    });
+    this.saveAppraisals();
+  }
+
+  clearAppraisedValue(username, itemId) {
+    const userAppraisals = this.appraisals.get(username);
+    if (userAppraisals) {
+      userAppraisals.delete(itemId);
+      this.saveAppraisals();
+    }
+  }
+
+  saveAppraisals() {
+    persistence.saveAppraisals(this.appraisals);
+  }
+
+  // Pending appraisal methods
+  addPendingAppraisal(id, data) {
+    this.pendingAppraisals.set(id, data);
+    this.savePendingAppraisals();
+  }
+
+  removePendingAppraisal(id) {
+    this.pendingAppraisals.delete(id);
+    this.savePendingAppraisals();
+  }
+
+  getPendingAppraisals() {
+    return this.pendingAppraisals;
+  }
+
+  getPendingAppraisalsForUser(username) {
+    const pending = [];
+    for (const [id, data] of this.pendingAppraisals.entries()) {
+      if (data.username === username) {
+        pending.push({ id, ...data });
+      }
+    }
+    return pending;
+  }
+
+  savePendingAppraisals() {
+    persistence.savePendingAppraisals(this.pendingAppraisals);
   }
 
   // Blackjack methods

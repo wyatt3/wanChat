@@ -6,10 +6,12 @@ const DATA_DIR = path.join(__dirname);
 const BALANCES_FILE = path.join(DATA_DIR, 'balances.json');
 const INVENTORIES_FILE = path.join(DATA_DIR, 'inventories.json');
 const EQUIPPED_FILE = path.join(DATA_DIR, 'equipped.json');
+const APPRAISALS_FILE = path.join(DATA_DIR, 'appraisals.json');
+const PENDING_APPRAISALS_FILE = path.join(DATA_DIR, 'pendingAppraisals.json');
 
 // Initialize persistence files on startup
 function init() {
-  const files = [BALANCES_FILE, INVENTORIES_FILE, EQUIPPED_FILE];
+  const files = [BALANCES_FILE, INVENTORIES_FILE, EQUIPPED_FILE, APPRAISALS_FILE, PENDING_APPRAISALS_FILE];
 
   files.forEach(file => {
     if (!fs.existsSync(file)) {
@@ -100,11 +102,72 @@ function saveEquipped(equippedMap) {
   }
 }
 
+// Load appraisals from file
+// Format: { username: { itemId: { value: number, appraisedAt: timestamp } } }
+function loadAppraisals() {
+  try {
+    if (fs.existsSync(APPRAISALS_FILE)) {
+      const data = fs.readFileSync(APPRAISALS_FILE, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (err) {
+    console.error('Error loading appraisals:', err);
+  }
+  return {};
+}
+
+// Save appraisals to file
+function saveAppraisals(appraisalsMap) {
+  try {
+    const data = {};
+    for (const [username, items] of appraisalsMap.entries()) {
+      data[username] = {};
+      for (const [itemId, appraisal] of items.entries()) {
+        data[username][itemId] = appraisal;
+      }
+    }
+    fs.writeFileSync(APPRAISALS_FILE, JSON.stringify(data, null, 2));
+  } catch (err) {
+    console.error('Error saving appraisals:', err);
+  }
+}
+
+// Load pending appraisals from file
+// Format: { id: { username, itemId, returnTime, fee } }
+function loadPendingAppraisals() {
+  try {
+    if (fs.existsSync(PENDING_APPRAISALS_FILE)) {
+      const data = fs.readFileSync(PENDING_APPRAISALS_FILE, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (err) {
+    console.error('Error loading pending appraisals:', err);
+  }
+  return {};
+}
+
+// Save pending appraisals to file
+function savePendingAppraisals(pendingMap) {
+  try {
+    const data = {};
+    for (const [id, pending] of pendingMap.entries()) {
+      data[id] = pending;
+    }
+    fs.writeFileSync(PENDING_APPRAISALS_FILE, JSON.stringify(data, null, 2));
+  } catch (err) {
+    console.error('Error saving pending appraisals:', err);
+  }
+}
+
 module.exports = {
   loadBalances,
   saveBalances,
   loadInventories,
   saveInventories,
   loadEquipped,
-  saveEquipped
+  saveEquipped,
+  loadAppraisals,
+  saveAppraisals,
+  loadPendingAppraisals,
+  savePendingAppraisals
 };

@@ -122,6 +122,14 @@ class CommandHandler {
         return storeCommands.equip(ctx);
       case '/unequip':
         return storeCommands.unequip(ctx);
+      case '/giveitem':
+      case '/gift':
+        return storeCommands.giveitem(ctx);
+      case '/appraise':
+        return storeCommands.appraise(ctx);
+      case '/inventories':
+      case '/invs':
+        return storeCommands.inventories(ctx);
 
       // Fun commands
       case '/fart':

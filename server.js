@@ -11,6 +11,7 @@ const CommandHandler = require('./server/commandHandler');
 const snakeCommands = require('./server/commands/snake');
 const flashCommands = require('./server/commands/flash');
 const storeConfig = require('./server/data/storeConfig');
+const storeCommands = require('./server/commands/store');
 
 const app = express();
 const server = createServer(app);
@@ -136,6 +137,9 @@ function getTimestamp() {
 
 // Initialize command handler
 const commandHandler = new CommandHandler(io, gameState, users, getTimestamp);
+
+// Restore pending appraisal timers from saved state
+storeCommands.restoreAppraisalTimers(gameState, io, commandHandler);
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {
