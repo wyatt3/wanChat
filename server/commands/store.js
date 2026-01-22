@@ -27,6 +27,16 @@ function store(ctx) {
   const balance = gameState.getBalance(username);
   const inventory = gameState.getInventory(username);
 
+  // Calculate time until next refresh (next 15-min mark)
+  const now = new Date();
+  const minutes = now.getMinutes();
+  const seconds = now.getSeconds();
+  const minutesUntilRefresh = 15 - (minutes % 15) - (seconds > 0 ? 1 : 0);
+  const secondsUntilRefresh = seconds > 0 ? 60 - seconds : 0;
+  const refreshTime = minutesUntilRefresh > 0 || secondsUntilRefresh > 0
+    ? `${minutesUntilRefresh}m ${secondsUntilRefresh.toString().padStart(2, '0')}s`
+    : 'now';
+
   const raritySymbols = {
     common: '',
     uncommon: '*',
@@ -39,7 +49,7 @@ function store(ctx) {
   handler.sendToSocket(socket, '┌────────────────────────────────────────────┐');
   handler.sendToSocket(socket, '│              WANCHAT STORE                 │');
   handler.sendToSocket(socket, '├────────────────────────────────────────────┤');
-  handler.sendToSocket(socket, `   Your balance: $${formatPrice(balance)}`);
+  handler.sendToSocket(socket, `│  Your balance: $${formatPrice(balance)}`);
   handler.sendToSocket(socket, '├────────────────────────────────────────────┤');
 
   items.forEach((item, idx) => {
@@ -49,12 +59,12 @@ function store(ctx) {
     const price = `$${formatPrice(item.price)}`;
     const name = item.name.length > 18 ? item.name.substring(0, 16) + '..' : item.name;
 
-    handler.sendToSocket(socket, `  ${(idx + 1).toString().padStart(2)}. ${emoji} ${name.padEnd(18)} ${price.padStart(12)} ${stars}${owned}`);
+    handler.sendToSocket(socket, `│ ${(idx + 1).toString().padStart(2)}. ${emoji} ${name.padEnd(18)} ${price.padStart(12)} ${stars}${owned}`);
   });
 
   handler.sendToSocket(socket, '├────────────────────────────────────────────┤');
-  handler.sendToSocket(socket, '   /buy [#]  /sell [#]  /inventory');
-  handler.sendToSocket(socket, '   Stock refreshes every 15 min');
+  handler.sendToSocket(socket, '│  /buy [#]  /sell [#]  /inventory');
+  handler.sendToSocket(socket, `│  Refreshes in ${refreshTime}`);
   handler.sendToSocket(socket, '└────────────────────────────────────────────┘');
 
   return true;
@@ -137,7 +147,7 @@ function inventory(ctx) {
     handler.sendToSocket(socket, '┌────────────────────────────────────────────┐');
     handler.sendToSocket(socket, '│             INVENTORY EMPTY                │');
     handler.sendToSocket(socket, '├────────────────────────────────────────────┤');
-    handler.sendToSocket(socket, '   Use /store to shop!');
+    handler.sendToSocket(socket, '│  Use /store to shop!');
     handler.sendToSocket(socket, '└────────────────────────────────────────────┘');
     return true;
   }
@@ -170,7 +180,7 @@ function inventory(ctx) {
     if (item.category !== currentCategory) {
       currentCategory = item.category;
       const catName = categoryNames[item.category] || item.category.toUpperCase();
-      handler.sendToSocket(socket, `  ${catName}`);
+      handler.sendToSocket(socket, `│ ${catName}`);
     }
 
     if (item.category === 'title') hasTitles = true;
@@ -179,16 +189,16 @@ function inventory(ctx) {
     const sellValue = Math.floor(item.price * 0.5);
     const equipped = (item.id === equippedTitleId) ? '*' : ' ';
     const name = item.name.length > 18 ? item.name.substring(0, 16) + '..' : item.name;
-    handler.sendToSocket(socket, `  ${equipped}${(idx + 1).toString().padStart(2)}. ${emoji} ${name.padEnd(18)} ($${formatPrice(sellValue)})`);
+    handler.sendToSocket(socket, `│ ${equipped}${(idx + 1).toString().padStart(2)}. ${emoji} ${name.padEnd(18)} ($${formatPrice(sellValue)})`);
   });
 
   handler.sendToSocket(socket, '├────────────────────────────────────────────┤');
   if (isOwn && hasTitles) {
-    handler.sendToSocket(socket, '   /equip [#] to equip a title');
-    handler.sendToSocket(socket, '   /unequip to remove title');
+    handler.sendToSocket(socket, '│  /equip [#] to equip a title');
+    handler.sendToSocket(socket, '│  /unequip to remove title');
   }
-  handler.sendToSocket(socket, '   /sell [#] to sell (50% value)');
-  handler.sendToSocket(socket, '   * = currently equipped');
+  handler.sendToSocket(socket, '│  /sell [#] to sell (50% value)');
+  handler.sendToSocket(socket, '│  * = currently equipped');
   handler.sendToSocket(socket, '└────────────────────────────────────────────┘');
 
   return true;

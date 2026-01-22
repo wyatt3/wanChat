@@ -1,5 +1,8 @@
 // Store configuration and item catalog
 
+// Server start time - used to refresh store on restart
+const SERVER_START_TIME = Date.now();
+
 const ITEMS = {
   // ============== TITLES ==============
 
@@ -1330,15 +1333,17 @@ const ITEMS = {
 // Items always in stock
 const ALWAYS_AVAILABLE = ['title_noob', 'collectible_rock'];
 
-// Get rotating items based on 15-minute intervals
+// Get rotating items based on 15-minute intervals (refreshes on server restart)
 function getRotatingItems(itemCount = 8) {
   const now = new Date();
   const quarterHour = Math.floor(now.getMinutes() / 15);
-  const seed = now.getFullYear() * 100000000 +
+  const timeSeed = now.getFullYear() * 100000000 +
                (now.getMonth() + 1) * 1000000 +
                now.getDate() * 10000 +
                now.getHours() * 100 +
                quarterHour;
+  // Include server start time so store refreshes on restart
+  const seed = timeSeed + (SERVER_START_TIME % 100000);
 
   // Simple seeded random
   const seededRandom = (s) => {
@@ -1349,13 +1354,28 @@ function getRotatingItems(itemCount = 8) {
   // Get rotating items (exclude always available)
   const rotatingItems = Object.keys(ITEMS).filter(id => !ALWAYS_AVAILABLE.includes(id));
 
-  // Shuffle with seed
-  const shuffled = [...rotatingItems].sort((a, b) => {
+  // Separate titles and non-titles
+  const titles = rotatingItems.filter(id => ITEMS[id].category === 'title');
+  const nonTitles = rotatingItems.filter(id => ITEMS[id].category !== 'title');
+
+  // Shuffle both with seed
+  const shuffledTitles = [...titles].sort((a, b) => {
+    return seededRandom(seed + a.charCodeAt(0)) - seededRandom(seed + b.charCodeAt(0));
+  });
+  const shuffledNonTitles = [...nonTitles].sort((a, b) => {
     return seededRandom(seed + a.charCodeAt(0)) - seededRandom(seed + b.charCodeAt(0));
   });
 
-  // Take first N items
-  return shuffled.slice(0, itemCount);
+  // Ensure at least 1 title in rotation (2 total with always-available title_noob)
+  const guaranteedTitles = shuffledTitles.slice(0, 1);
+  const remainingSlots = itemCount - guaranteedTitles.length;
+
+  // Fill remaining slots from shuffled mix of remaining titles and non-titles
+  const remaining = [...shuffledTitles.slice(1), ...shuffledNonTitles].sort((a, b) => {
+    return seededRandom(seed + a.charCodeAt(0) + 100) - seededRandom(seed + b.charCodeAt(0) + 100);
+  });
+
+  return [...guaranteedTitles, ...remaining.slice(0, remainingSlots)];
 }
 
 function getAvailableItems() {
