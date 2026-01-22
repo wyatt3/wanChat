@@ -1,9 +1,20 @@
 // Centralized game state manager
+const persistence = require('./data/persistence');
+
 class GameState {
   constructor() {
-    // User balances - keyed by username (persists across reconnects within session)
-    this.balances = new Map();
+    // User balances - keyed by username (persists to file)
+    const savedBalances = persistence.loadBalances();
+    this.balances = new Map(Object.entries(savedBalances));
     this.DEFAULT_BALANCE = 20;
+
+    // User inventories - keyed by username (persists to file)
+    const savedInventories = persistence.loadInventories();
+    this.inventories = new Map(Object.entries(savedInventories));
+
+    // Equipped titles - keyed by username (persists to file)
+    const savedEquipped = persistence.loadEquipped();
+    this.equippedTitles = new Map(Object.entries(savedEquipped));
 
     // Beg tracking
     this.begCounts = new Map(); // username -> count
@@ -78,6 +89,11 @@ class GameState {
 
   setBalance(username, amount) {
     this.balances.set(username, Math.max(0, Math.floor(amount)));
+    this.saveBalances();
+  }
+
+  saveBalances() {
+    persistence.saveBalances(this.balances);
   }
 
   addBalance(username, amount) {
@@ -108,6 +124,54 @@ class GameState {
 
   resetBeg(username) {
     this.begCounts.set(username, 0);
+  }
+
+  // Inventory methods
+  getInventory(username) {
+    if (!this.inventories.has(username)) {
+      this.inventories.set(username, []);
+    }
+    return this.inventories.get(username);
+  }
+
+  addToInventory(username, itemId) {
+    const inventory = this.getInventory(username);
+    inventory.push(itemId);
+    this.saveInventories();
+  }
+
+  removeFromInventory(username, itemId) {
+    const inventory = this.getInventory(username);
+    const idx = inventory.indexOf(itemId);
+    if (idx !== -1) {
+      inventory.splice(idx, 1);
+      this.saveInventories();
+      return true;
+    }
+    return false;
+  }
+
+  saveInventories() {
+    persistence.saveInventories(this.inventories);
+  }
+
+  // Equipped title methods
+  getEquippedTitle(username) {
+    return this.equippedTitles.get(username) || null;
+  }
+
+  setEquippedTitle(username, titleId) {
+    this.equippedTitles.set(username, titleId);
+    this.saveEquipped();
+  }
+
+  clearEquippedTitle(username) {
+    this.equippedTitles.delete(username);
+    this.saveEquipped();
+  }
+
+  saveEquipped() {
+    persistence.saveEquipped(this.equippedTitles);
   }
 
   // Blackjack methods

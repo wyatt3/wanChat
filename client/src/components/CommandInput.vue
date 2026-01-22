@@ -8,6 +8,7 @@
       type="text"
       class="input"
       @keyup.enter="handleSend"
+      @keydown="handleKeydown"
       placeholder="Type a message..."
     />
   </div>
@@ -21,6 +22,7 @@
       type="text"
       class="input"
       @keyup.enter="handleSend"
+      @keydown="handleKeydown"
       placeholder="Enter value or formula..."
     />
   </div>
@@ -33,6 +35,7 @@
       type="text"
       class="input"
       @keyup.enter="handleSend"
+      @keydown="handleKeydown"
       placeholder="Reply to all..."
     />
     <button class="send-btn" @click="handleSend">Send</button>
@@ -46,6 +49,7 @@
       type="text"
       class="input"
       @keyup.enter="handleSend"
+      @keydown="handleKeydown"
       placeholder="Type here..."
     />
   </div>
@@ -59,6 +63,7 @@
       type="text"
       class="input"
       @keyup.enter="handleSend"
+      @keydown="handleKeydown"
       placeholder="Type a message..."
     />
   </div>
@@ -83,14 +88,55 @@ const emit = defineEmits(['send'])
 const message = ref('')
 const inputEl = ref(null)
 
+// Command history
+const history = ref([])
+const historyIndex = ref(-1)
+const tempMessage = ref('')
+
 onMounted(() => {
   inputEl.value?.focus()
 })
 
 function handleSend() {
   if (message.value.trim()) {
+    // Add to history
+    history.value.push(message.value)
+    // Reset history navigation
+    historyIndex.value = -1
+    tempMessage.value = ''
+
     emit('send', message.value)
     message.value = ''
+  }
+}
+
+function handleKeydown(e) {
+  if (e.key === 'ArrowUp') {
+    e.preventDefault()
+    if (history.value.length === 0) return
+
+    // Save current input if starting to navigate
+    if (historyIndex.value === -1) {
+      tempMessage.value = message.value
+    }
+
+    // Move back in history
+    if (historyIndex.value < history.value.length - 1) {
+      historyIndex.value++
+      message.value = history.value[history.value.length - 1 - historyIndex.value]
+    }
+  } else if (e.key === 'ArrowDown') {
+    e.preventDefault()
+    if (historyIndex.value === -1) return
+
+    // Move forward in history
+    historyIndex.value--
+    if (historyIndex.value === -1) {
+      // Restore original input
+      message.value = tempMessage.value
+    } else {
+      message.value = history.value[history.value.length - 1 - historyIndex.value]
+    }
   }
 }
 </script>

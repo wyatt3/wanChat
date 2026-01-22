@@ -5,6 +5,7 @@ function help(ctx) {
     '=== WANCHAT COMMANDS ===',
     'System: /help /users /clear /clearall',
     'Money: /balance /give [user] [amount] /beg',
+    'Store: /store /buy /sell /inventory /equip /unequip',
     'Blackjack: /deal /bet [amount] /fold /hit /stand /double /split',
     'Racing: /race /horse [1-5] [amount] /pass',
     'Snake: /snake (WASD to move)',

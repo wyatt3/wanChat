@@ -6,6 +6,7 @@ const blackjackCommands = require('./commands/blackjack');
 const racingCommands = require('./commands/racing');
 const snakeCommands = require('./commands/snake');
 const flashCommands = require('./commands/flash');
+const storeCommands = require('./commands/store');
 
 class CommandHandler {
   constructor(io, gameState, users, getTimestamp) {
@@ -106,6 +107,21 @@ class CommandHandler {
         return economyCommands.give(ctx);
       case '/beg':
         return economyCommands.beg(ctx);
+
+      // Store commands
+      case '/store':
+        return storeCommands.store(ctx);
+      case '/buy':
+        return storeCommands.buy(ctx);
+      case '/sell':
+        return storeCommands.sell(ctx);
+      case '/inventory':
+      case '/inv':
+        return storeCommands.inventory(ctx);
+      case '/equip':
+        return storeCommands.equip(ctx);
+      case '/unequip':
+        return storeCommands.unequip(ctx);
 
       // Fun commands
       case '/fart':

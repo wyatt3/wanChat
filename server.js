@@ -10,6 +10,7 @@ const GameState = require('./server/gameState');
 const CommandHandler = require('./server/commandHandler');
 const snakeCommands = require('./server/commands/snake');
 const flashCommands = require('./server/commands/flash');
+const storeConfig = require('./server/data/storeConfig');
 
 const app = express();
 const server = createServer(app);
@@ -167,8 +168,13 @@ io.on('connection', (socket) => {
       if (trimmed.startsWith('/')) {
         commandHandler.parse(socket, trimmed);
       } else {
+        // Get equipped title prefix if any
+        const equippedTitleId = gameState.getEquippedTitle(username);
+        const equippedTitle = equippedTitleId ? storeConfig.getItem(equippedTitleId) : null;
+        const displayName = equippedTitle ? `${equippedTitle.prefix} ${username}` : username;
+
         io.emit('chat', {
-          user: username,
+          user: displayName,
           text: trimmed,
           time: getTimestamp()
         });
