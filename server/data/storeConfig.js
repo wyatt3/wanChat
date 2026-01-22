@@ -1345,9 +1345,21 @@ function getRotatingItems(itemCount = 8) {
   // Include server start time so store refreshes on restart
   const seed = timeSeed + (SERVER_START_TIME % 100000);
 
-  // Simple seeded random
-  const seededRandom = (s) => {
-    const x = Math.sin(s) * 10000;
+  // Hash a string to a number
+  const hashString = (str) => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return Math.abs(hash);
+  };
+
+  // Seeded random for a given item
+  const seededRandom = (itemId, offset = 0) => {
+    const combined = seed + hashString(itemId) + offset;
+    const x = Math.sin(combined) * 10000;
     return x - Math.floor(x);
   };
 
@@ -1360,10 +1372,10 @@ function getRotatingItems(itemCount = 8) {
 
   // Shuffle both with seed
   const shuffledTitles = [...titles].sort((a, b) => {
-    return seededRandom(seed + a.charCodeAt(0)) - seededRandom(seed + b.charCodeAt(0));
+    return seededRandom(a) - seededRandom(b);
   });
   const shuffledNonTitles = [...nonTitles].sort((a, b) => {
-    return seededRandom(seed + a.charCodeAt(0)) - seededRandom(seed + b.charCodeAt(0));
+    return seededRandom(a) - seededRandom(b);
   });
 
   // Ensure at least 1 title in rotation (2 total with always-available title_noob)
@@ -1372,7 +1384,7 @@ function getRotatingItems(itemCount = 8) {
 
   // Fill remaining slots from shuffled mix of remaining titles and non-titles
   const remaining = [...shuffledTitles.slice(1), ...shuffledNonTitles].sort((a, b) => {
-    return seededRandom(seed + a.charCodeAt(0) + 100) - seededRandom(seed + b.charCodeAt(0) + 100);
+    return seededRandom(a, 1000) - seededRandom(b, 1000);
   });
 
   return [...guaranteedTitles, ...remaining.slice(0, remainingSlots)];
