@@ -9,7 +9,12 @@ const MODEL = 'deepseek-r1:8b';
 const REQUEST_TIMEOUT = 300000;
 
 // Make a request to the Ollama API
-async function ollamaRequest(prompt, options = {}) {
+async function ollamaRequest(prompt, options = {}, debug = null) {
+  const log = (msg) => {
+    console.log(`[OLLAMA] ${msg}`);
+    if (debug) debug(msg);
+  };
+
   return new Promise((resolve, reject) => {
     const data = JSON.stringify({
       model: MODEL,
@@ -44,18 +49,38 @@ async function ollamaRequest(prompt, options = {}) {
           const json = JSON.parse(body);
           let fullResponse = json.response || '';
 
+          // Debug: log raw response length
+          log(`Raw response length: ${fullResponse.length}`);
+          if (fullResponse.length > 0 && fullResponse.length < 500) {
+            log(`Raw: ${fullResponse}`);
+          } else if (fullResponse.length > 0) {
+            log(`Raw (first 300): ${fullResponse.substring(0, 300)}`);
+          }
+
           // Try to extract content outside of think tags first
           let response = fullResponse.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
 
           // If response is empty after removing think tags, try to find JSON inside the think tags
           if (!response || response.length === 0) {
-            // Look for JSON inside the think tags
-            const thinkMatch = fullResponse.match(/<think>([\s\S]*?)<\/think>/);
+            log(`Empty after stripping think tags, checking inside...`);
+            // Look for JSON inside the think tags - use greedy match to get ALL content
+            const thinkMatch = fullResponse.match(/<think>([\s\S]*)<\/think>/);
             if (thinkMatch) {
+              log(`Found think content (${thinkMatch[1].length} chars)`);
               // Try to find JSON object in the thinking
               const jsonInThink = thinkMatch[1].match(/\{[\s\S]*?"value"[\s\S]*?"reason"[\s\S]*?\}/);
               if (jsonInThink) {
+                log(`Found JSON in think tags!`);
                 response = jsonInThink[0];
+              } else {
+                log(`No JSON found in think content`);
+              }
+            } else {
+              log(`No think tags found`);
+              // Maybe the response IS the JSON without any tags
+              if (fullResponse.includes('"value"') && fullResponse.includes('"reason"')) {
+                log(`Response might be raw JSON, using as-is`);
+                response = fullResponse;
               }
             }
           }
@@ -175,8 +200,8 @@ BAD examples (too generic, could apply to anything):
 
   try {
     log(`Sending request to Ollama at ${OLLAMA_HOST}:${OLLAMA_PORT}...`);
-    const response = await ollamaRequest(prompt, { temperature: 1.1, maxTokens: 300 });
-    log(`Got response (${response.length} chars): ${response.substring(0, 200)}...`);
+    const response = await ollamaRequest(prompt, { temperature: 1.1, maxTokens: 300 }, debug);
+    log(`Processed response (${response.length} chars)`);
 
     // Try to extract JSON from response
     const jsonMatch = response.match(/\{[\s\S]*?"value"[\s\S]*?"reason"[\s\S]*?\}/);
