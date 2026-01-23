@@ -12,6 +12,8 @@ const snakeCommands = require('./server/commands/snake');
 const flashCommands = require('./server/commands/flash');
 const storeConfig = require('./server/data/storeConfig');
 const storeCommands = require('./server/commands/store');
+const carsCommands = require('./server/commands/cars');
+const dragCommands = require('./server/commands/dragracing');
 
 const app = express();
 const server = createServer(app);
@@ -140,6 +142,7 @@ const commandHandler = new CommandHandler(io, gameState, users, getTimestamp);
 
 // Restore pending appraisal timers from saved state
 storeCommands.restoreAppraisalTimers(gameState, io, commandHandler);
+carsCommands.restoreCarAppraisalTimers(gameState, io, commandHandler);
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {
@@ -254,6 +257,22 @@ io.on('connection', (socket) => {
       // Broadcast to all other sockets (not the host)
       // Use volatile to drop frames if clients can't keep up (prevents backlog)
       socket.broadcast.volatile.emit('flash_frame', { frame: frameData });
+    }
+  });
+
+  // Handle drag racing input (lane switch)
+  socket.on('drag_input', (data) => {
+    const username = users.get(socket.id);
+    if (username && data && typeof data.lane === 'number') {
+      dragCommands.switchLane(gameState, username, data.lane);
+    }
+  });
+
+  // Handle drag racing nitro
+  socket.on('drag_nitro', () => {
+    const username = users.get(socket.id);
+    if (username) {
+      dragCommands.useNitro(gameState, io, username);
     }
   });
 

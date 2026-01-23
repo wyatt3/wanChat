@@ -15,100 +15,7 @@ if (!fs.existsSync(DATA_DIR)) {
 let currentItems = {};
 let lastRefreshTime = 0;
 let isGenerating = false;
-
-// Fallback items if AI fails
-const FALLBACK_ITEMS = {
-  title_noob: {
-    id: 'title_noob',
-    name: 'Noob Title',
-    description: 'Display [Noob] before your name',
-    price: 5,
-    category: 'title',
-    rarity: 'common',
-    prefix: '[Noob]'
-  },
-  collectible_rock: {
-    id: 'collectible_rock',
-    name: 'Pet Rock',
-    description: 'Your new best friend.',
-    price: 10,
-    category: 'collectible',
-    rarity: 'common',
-    emoji: '🪨'
-  },
-  title_gamer: {
-    id: 'title_gamer',
-    name: 'Gamer Title',
-    description: 'Display [Gamer] before your name',
-    price: 50,
-    category: 'title',
-    rarity: 'uncommon',
-    prefix: '[Gamer]'
-  },
-  collectible_banana: {
-    id: 'collectible_banana',
-    name: 'Banana',
-    description: 'A perfectly good banana.',
-    price: 3,
-    category: 'collectible',
-    rarity: 'common',
-    emoji: '🍌'
-  },
-  title_legend: {
-    id: 'title_legend',
-    name: 'Legend Title',
-    description: 'Display [Legend] before your name',
-    price: 500,
-    category: 'title',
-    rarity: 'rare',
-    prefix: '[Legend]'
-  },
-  collectible_diamond: {
-    id: 'collectible_diamond',
-    name: 'Fake Diamond',
-    description: 'Looks real enough.',
-    price: 200,
-    category: 'collectible',
-    rarity: 'rare',
-    emoji: '💎'
-  },
-  title_whale: {
-    id: 'title_whale',
-    name: 'Whale Title',
-    description: 'Display [Whale] before your name',
-    price: 5000,
-    category: 'title',
-    rarity: 'legendary',
-    prefix: '[Whale]'
-  },
-  collectible_void: {
-    id: 'collectible_void',
-    name: 'Piece of the Void',
-    description: 'Do not stare too long.',
-    price: 666,
-    category: 'collectible',
-    rarity: 'legendary',
-    emoji: '🕳️'
-  },
-  title_transcendent: {
-    id: 'title_transcendent',
-    name: 'Transcendent Title',
-    description: 'Display [Transcendent] before your name',
-    price: 100000,
-    category: 'title',
-    rarity: 'mythic',
-    prefix: '[Transcendent]'
-  },
-  collectible_galaxy: {
-    id: 'collectible_galaxy',
-    name: 'Pocket Galaxy',
-    description: 'A whole galaxy in your pocket.',
-    price: 50000,
-    category: 'collectible',
-    rarity: 'mythic',
-    emoji: '🌌'
-  }
-};
+let initialLoadComplete = false;
 
 // Load saved store items
 function loadStoreItems() {
@@ -154,13 +61,14 @@ function needsRefresh() {
   return currentWindow > lastRefreshTime;
 }
 
-// Generate new store items via AI
-async function refreshStoreItems(broadcast = null) {
+// Generate new store items via AI (with retry on failure)
+async function refreshStoreItems(broadcast = null, retryCount = 0) {
   if (isGenerating) {
     console.log('Store refresh already in progress...');
     return;
   }
 
+  const maxRetries = 3;
   isGenerating = true;
   console.log('Generating new store items via AI...');
 
@@ -187,6 +95,7 @@ async function refreshStoreItems(broadcast = null) {
 
       lastRefreshTime = getCurrentWindow();
       saveStoreItems();
+      initialLoadComplete = true;
       console.log(`Generated ${Object.keys(currentItems).length} new store items`);
 
       if (broadcast) {
@@ -196,31 +105,43 @@ async function refreshStoreItems(broadcast = null) {
       throw new Error('AI returned no valid items');
     }
   } catch (error) {
-    console.error('AI item generation failed, using fallback items:', error.message);
-    currentItems = { ...FALLBACK_ITEMS };
-    lastRefreshTime = getCurrentWindow();
-    saveStoreItems();
+    console.error(`AI item generation failed (attempt ${retryCount + 1}/${maxRetries}):`, error.message);
 
-    if (broadcast) {
-      broadcast('🏪 Store restocked with classic items');
+    isGenerating = false;
+
+    // Retry if we haven't exceeded max retries
+    if (retryCount < maxRetries - 1) {
+      console.log(`Retrying store generation in 5 seconds...`);
+      if (broadcast) {
+        broadcast(`🏪 Store generation failed, retrying... (${retryCount + 2}/${maxRetries})`);
+      }
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      return refreshStoreItems(broadcast, retryCount + 1);
+    } else {
+      console.error('All store generation attempts failed. Store will be empty until next refresh.');
+      if (broadcast) {
+        broadcast('🏪 Store generation failed. Try /refreshstore to retry.');
+      }
     }
   }
 
   isGenerating = false;
 }
 
-// Initialize store on load
-function initializeStore() {
+// Initialize store on load - always generate fresh AI items on startup
+async function initializeStore() {
   const loaded = loadStoreItems();
-  if (!loaded || needsRefresh() || Object.keys(currentItems).length === 0) {
-    // Use fallback items initially, then try to refresh with AI
-    if (Object.keys(currentItems).length === 0) {
-      currentItems = { ...FALLBACK_ITEMS };
-      lastRefreshTime = getCurrentWindow();
-    }
-    // Trigger async refresh
-    refreshStoreItems().catch(console.error);
+
+  // If we have saved items and they're not expired, use them
+  if (loaded && !needsRefresh() && Object.keys(currentItems).length > 0) {
+    console.log('Using cached store items');
+    initialLoadComplete = true;
+    return;
   }
+
+  // Otherwise, generate new items from AI
+  console.log('Generating fresh store items from AI on startup...');
+  await refreshStoreItems();
 }
 
 // Get available items (all current items)
@@ -257,8 +178,8 @@ async function forceRefresh(broadcast = null) {
   await refreshStoreItems(broadcast);
 }
 
-// Initialize on module load
-initializeStore();
+// Initialize on module load (async)
+initializeStore().catch(console.error);
 
 module.exports = {
   getAvailableItems,
@@ -267,5 +188,6 @@ module.exports = {
   getTimeUntilRefresh,
   forceRefresh,
   needsRefresh,
-  isGenerating: () => isGenerating
+  isGenerating: () => isGenerating,
+  isReady: () => initialLoadComplete
 };

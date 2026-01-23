@@ -5,13 +5,15 @@ function help(ctx) {
     '=== WANCHAT COMMANDS ===',
     'System: /help /users /clear /clearall',
     'Money: /balance /give [user] [amount] /beg',
-    'Store: /store /buy /sell /inventory /inventories /equip /giveitem /appraise /refreshstore',
+    'Store: /store /buy /sell /inventory /inventories /equip /giveitem /appraise',
+    'Cars: /dealership /garage /garages /buycar /sellcar /givecar /appraisecar /carspecs',
+    'Drag Racing: /drag /dragbet [amount] /dragpass /dragstart /left /right /nitro',
     'Blackjack: /deal /bet [amount] /fold /hit /stand /double /split',
     'Racing: /race /horse [1-5] [amount] /pass',
     'Snake: /snake (WASD to move)',
     'Flash: /flash [game] (list or play Flash games)',
     'Fun: /fart /light',
-    'Admin: /update /killall',
+    'Admin: /update /killall /refreshstore /refreshdealership',
     'UI: /skin [terminal|spreadsheet|email|notepad]'
   ];
 

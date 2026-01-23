@@ -17,6 +17,8 @@
       @flash-frame="handleFlashFrame"
       @change-skin="changeSkin"
       @local-message="handleLocalMessage"
+      @drag-input="handleDragInput"
+      @drag-nitro="handleDragNitro"
     />
     <!-- Smoke effect overlay -->
     <div v-if="showSmoke" class="smoke-overlay">
@@ -110,6 +112,18 @@ const gameState = reactive({
     hostSocketId: null,
     gameFile: null,
     gameName: null
+  },
+
+  // Drag racing state
+  drag: {
+    phase: null, // 'betting', 'countdown', 'racing', 'result'
+    host: null,
+    racers: {},  // username -> { car, bet, position, lane, nitroLeft, finished }
+    potholes: [], // { lane, position }
+    countdown: 0,
+    results: null,
+    winner: null,
+    totalPot: 0
   }
 })
 
@@ -533,6 +547,90 @@ onMounted(() => {
       flashStreamFrame.value = data.frame
     }
   })
+
+  // === DRAG RACING EVENTS ===
+  socket.value.on('drag_start', (data) => {
+    gameState.activeGame = 'drag'
+    gameState.drag.phase = 'betting'
+    gameState.drag.host = data.host
+    gameState.drag.racers = {}
+    gameState.drag.potholes = []
+    gameState.drag.results = null
+    gameState.drag.winner = null
+    showNotification('Drag Race', `${data.host} is organizing a drag race!`, 'drag')
+  })
+
+  socket.value.on('drag_bet_placed', (data) => {
+    gameState.drag.racers[data.player] = {
+      car: data.car,
+      bet: data.amount,
+      position: 0,
+      lane: 0,
+      nitroLeft: 0,
+      finished: false
+    }
+  })
+
+  socket.value.on('drag_countdown', (data) => {
+    gameState.drag.phase = 'countdown'
+    gameState.drag.countdown = data.countdown
+    // Update racers with full data
+    for (const [name, racer] of Object.entries(data.racers)) {
+      gameState.drag.racers[name] = {
+        ...gameState.drag.racers[name],
+        ...racer
+      }
+    }
+  })
+
+  socket.value.on('drag_countdown_tick', (data) => {
+    gameState.drag.countdown = data.count
+  })
+
+  socket.value.on('drag_go', () => {
+    gameState.drag.phase = 'racing'
+    gameState.drag.countdown = 0
+  })
+
+  socket.value.on('drag_update', (data) => {
+    // Update racer positions
+    for (const [name, state] of Object.entries(data.racers)) {
+      if (gameState.drag.racers[name]) {
+        gameState.drag.racers[name].position = state.position
+        gameState.drag.racers[name].lane = state.lane
+        gameState.drag.racers[name].speed = state.speed
+        gameState.drag.racers[name].nitroLeft = state.nitroLeft
+        gameState.drag.racers[name].finished = state.finished
+      }
+    }
+    // Update potholes
+    gameState.drag.potholes = data.potholes
+  })
+
+  socket.value.on('drag_pothole_hit', (data) => {
+    // Show feedback to user that they hit a pothole
+  })
+
+  socket.value.on('drag_nitro_used', (data) => {
+    // Show nitro feedback
+  })
+
+  socket.value.on('drag_result', (data) => {
+    gameState.drag.phase = 'result'
+    gameState.drag.winner = data.winner
+    gameState.drag.results = data.results
+    gameState.drag.totalPot = data.totalPot
+  })
+
+  socket.value.on('drag_cancelled', () => {
+    resetDrag()
+  })
+
+  socket.value.on('drag_ended', () => {
+    setTimeout(() => {
+      resetDrag()
+    }, 3000)
+  })
 })
 
 function resetBlackjack() {
@@ -588,6 +686,20 @@ function resetFlash() {
   }
 }
 
+function resetDrag() {
+  gameState.drag.phase = null
+  gameState.drag.host = null
+  gameState.drag.racers = {}
+  gameState.drag.potholes = []
+  gameState.drag.countdown = 0
+  gameState.drag.results = null
+  gameState.drag.winner = null
+  gameState.drag.totalPot = 0
+  if (gameState.activeGame === 'drag') {
+    gameState.activeGame = null
+  }
+}
+
 onUnmounted(() => {
   if (socket.value) {
     socket.value.disconnect()
@@ -637,6 +749,14 @@ function handleLocalMessage(text) {
       second: '2-digit'
     })
   })
+}
+
+function handleDragInput(lane) {
+  socket.value.emit('drag_input', { lane })
+}
+
+function handleDragNitro() {
+  socket.value.emit('drag_nitro')
 }
 </script>
 

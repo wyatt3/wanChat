@@ -8,10 +8,16 @@ const INVENTORIES_FILE = path.join(DATA_DIR, 'inventories.json');
 const EQUIPPED_FILE = path.join(DATA_DIR, 'equipped.json');
 const APPRAISALS_FILE = path.join(DATA_DIR, 'appraisals.json');
 const PENDING_APPRAISALS_FILE = path.join(DATA_DIR, 'pendingAppraisals.json');
+const GARAGES_FILE = path.join(DATA_DIR, 'garages.json');
+const CAR_APPRAISALS_FILE = path.join(DATA_DIR, 'carAppraisals.json');
+const PENDING_CAR_APPRAISALS_FILE = path.join(DATA_DIR, 'pendingCarAppraisals.json');
 
 // Initialize persistence files on startup
 function init() {
-  const files = [BALANCES_FILE, INVENTORIES_FILE, EQUIPPED_FILE, APPRAISALS_FILE, PENDING_APPRAISALS_FILE];
+  const files = [
+    BALANCES_FILE, INVENTORIES_FILE, EQUIPPED_FILE, APPRAISALS_FILE, PENDING_APPRAISALS_FILE,
+    GARAGES_FILE, CAR_APPRAISALS_FILE, PENDING_CAR_APPRAISALS_FILE
+  ];
 
   files.forEach(file => {
     if (!fs.existsSync(file)) {
@@ -159,6 +165,87 @@ function savePendingAppraisals(pendingMap) {
   }
 }
 
+// Load garages from file
+function loadGarages() {
+  try {
+    if (fs.existsSync(GARAGES_FILE)) {
+      const data = fs.readFileSync(GARAGES_FILE, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (err) {
+    console.error('Error loading garages:', err);
+  }
+  return {};
+}
+
+// Save garages to file
+function saveGarages(garagesMap) {
+  try {
+    const data = {};
+    for (const [username, cars] of garagesMap.entries()) {
+      data[username] = cars;
+    }
+    fs.writeFileSync(GARAGES_FILE, JSON.stringify(data, null, 2));
+  } catch (err) {
+    console.error('Error saving garages:', err);
+  }
+}
+
+// Load car appraisals from file
+function loadCarAppraisals() {
+  try {
+    if (fs.existsSync(CAR_APPRAISALS_FILE)) {
+      const data = fs.readFileSync(CAR_APPRAISALS_FILE, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (err) {
+    console.error('Error loading car appraisals:', err);
+  }
+  return {};
+}
+
+// Save car appraisals to file
+function saveCarAppraisals(appraisalsMap) {
+  try {
+    const data = {};
+    for (const [username, cars] of appraisalsMap.entries()) {
+      data[username] = {};
+      for (const [carName, appraisal] of cars.entries()) {
+        data[username][carName] = appraisal;
+      }
+    }
+    fs.writeFileSync(CAR_APPRAISALS_FILE, JSON.stringify(data, null, 2));
+  } catch (err) {
+    console.error('Error saving car appraisals:', err);
+  }
+}
+
+// Load pending car appraisals from file
+function loadPendingCarAppraisals() {
+  try {
+    if (fs.existsSync(PENDING_CAR_APPRAISALS_FILE)) {
+      const data = fs.readFileSync(PENDING_CAR_APPRAISALS_FILE, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (err) {
+    console.error('Error loading pending car appraisals:', err);
+  }
+  return {};
+}
+
+// Save pending car appraisals to file
+function savePendingCarAppraisals(pendingMap) {
+  try {
+    const data = {};
+    for (const [id, pending] of pendingMap.entries()) {
+      data[id] = pending;
+    }
+    fs.writeFileSync(PENDING_CAR_APPRAISALS_FILE, JSON.stringify(data, null, 2));
+  } catch (err) {
+    console.error('Error saving pending car appraisals:', err);
+  }
+}
+
 module.exports = {
   loadBalances,
   saveBalances,
@@ -169,5 +256,11 @@ module.exports = {
   loadAppraisals,
   saveAppraisals,
   loadPendingAppraisals,
-  savePendingAppraisals
+  savePendingAppraisals,
+  loadGarages,
+  saveGarages,
+  loadCarAppraisals,
+  saveCarAppraisals,
+  loadPendingCarAppraisals,
+  savePendingCarAppraisals
 };

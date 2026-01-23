@@ -27,6 +27,21 @@ class GameState {
     const savedPending = persistence.loadPendingAppraisals();
     this.pendingAppraisals = new Map(Object.entries(savedPending));
 
+    // Garages - keyed by username (persists to file)
+    const savedGarages = persistence.loadGarages();
+    this.garages = new Map(Object.entries(savedGarages));
+
+    // Car appraisals - keyed by username -> Map of carName -> { value, reason, appraisedAt }
+    const savedCarAppraisals = persistence.loadCarAppraisals();
+    this.carAppraisals = new Map();
+    for (const [username, cars] of Object.entries(savedCarAppraisals)) {
+      this.carAppraisals.set(username, new Map(Object.entries(cars)));
+    }
+
+    // Pending car appraisals - cars currently being appraised
+    const savedPendingCars = persistence.loadPendingCarAppraisals();
+    this.pendingCarAppraisals = new Map(Object.entries(savedPendingCars));
+
     // Beg tracking
     this.begCounts = new Map(); // username -> count
 
@@ -87,6 +102,21 @@ class GameState {
       hostSocketId: null,
       gameFile: null,
       gameName: null
+    };
+
+    // Drag racing state
+    this.drag = {
+      active: false,
+      host: null,
+      hostUsername: null,
+      collectingBets: false,
+      racers: new Map(),  // username -> { socketId, car, bet, position, lane, speed, nitroLeft, finished, finishTime }
+      potholes: [],       // Array of { lane: 0|1, position: number }
+      trackLength: 1000,  // Distance to finish line
+      gameLoop: null,
+      countdown: 0,
+      raceStartTime: null,
+      finishOrder: []     // Array of usernames in finish order
     };
   }
 
@@ -308,6 +338,147 @@ class GameState {
     persistence.savePendingAppraisals(this.pendingAppraisals);
   }
 
+  // Garage methods (stores full car objects)
+  getGarage(username) {
+    if (!this.garages.has(username)) {
+      this.garages.set(username, []);
+    }
+    return this.garages.get(username);
+  }
+
+  addToGarage(username, car) {
+    const garage = this.getGarage(username);
+    if (typeof car === 'string') {
+      garage.push(car);
+    } else {
+      garage.push({ ...car });
+    }
+    this.saveGarages();
+  }
+
+  removeFromGarage(username, carName) {
+    const garage = this.getGarage(username);
+    const idx = garage.findIndex(car => {
+      if (typeof car === 'string') {
+        return car.toLowerCase() === carName.toLowerCase();
+      }
+      return car.name && car.name.toLowerCase() === carName.toLowerCase();
+    });
+    if (idx !== -1) {
+      garage.splice(idx, 1);
+      this.saveGarages();
+      return true;
+    }
+    return false;
+  }
+
+  hasCar(username, carName) {
+    const garage = this.getGarage(username);
+    return garage.some(car => {
+      if (typeof car === 'string') {
+        return car.toLowerCase() === carName.toLowerCase();
+      }
+      return car.name && car.name.toLowerCase() === carName.toLowerCase();
+    });
+  }
+
+  saveGarages() {
+    persistence.saveGarages(this.garages);
+  }
+
+  // Car appraisal methods
+  getCarAppraisedValue(username, carName) {
+    const userAppraisals = this.carAppraisals.get(username);
+    if (!userAppraisals) return null;
+    let appraisal = userAppraisals.get(carName);
+    if (!appraisal) {
+      for (const [key, val] of userAppraisals.entries()) {
+        if (key.toLowerCase() === carName.toLowerCase()) {
+          appraisal = val;
+          break;
+        }
+      }
+    }
+    return appraisal ? appraisal.value : null;
+  }
+
+  getCarAppraisedData(username, carName) {
+    const userAppraisals = this.carAppraisals.get(username);
+    if (!userAppraisals) return null;
+    let appraisal = userAppraisals.get(carName);
+    if (!appraisal) {
+      for (const [key, val] of userAppraisals.entries()) {
+        if (key.toLowerCase() === carName.toLowerCase()) {
+          appraisal = val;
+          break;
+        }
+      }
+    }
+    return appraisal || null;
+  }
+
+  setCarAppraisedValue(username, carName, value, reason = null) {
+    if (!this.carAppraisals.has(username)) {
+      this.carAppraisals.set(username, new Map());
+    }
+    this.carAppraisals.get(username).set(carName, {
+      value: value,
+      reason: reason,
+      appraisedAt: Date.now()
+    });
+    this.saveCarAppraisals();
+  }
+
+  clearCarAppraisedValue(username, carName) {
+    const userAppraisals = this.carAppraisals.get(username);
+    if (userAppraisals) {
+      if (userAppraisals.has(carName)) {
+        userAppraisals.delete(carName);
+      } else {
+        for (const key of userAppraisals.keys()) {
+          if (key.toLowerCase() === carName.toLowerCase()) {
+            userAppraisals.delete(key);
+            break;
+          }
+        }
+      }
+      this.saveCarAppraisals();
+    }
+  }
+
+  saveCarAppraisals() {
+    persistence.saveCarAppraisals(this.carAppraisals);
+  }
+
+  // Pending car appraisal methods
+  addPendingCarAppraisal(id, data) {
+    this.pendingCarAppraisals.set(id, data);
+    this.savePendingCarAppraisals();
+  }
+
+  removePendingCarAppraisal(id) {
+    this.pendingCarAppraisals.delete(id);
+    this.savePendingCarAppraisals();
+  }
+
+  getPendingCarAppraisals() {
+    return this.pendingCarAppraisals;
+  }
+
+  getPendingCarAppraisalsForUser(username) {
+    const pending = [];
+    for (const [id, data] of this.pendingCarAppraisals.entries()) {
+      if (data.username === username) {
+        pending.push({ id, ...data });
+      }
+    }
+    return pending;
+  }
+
+  savePendingCarAppraisals() {
+    persistence.savePendingCarAppraisals(this.pendingCarAppraisals);
+  }
+
   // Blackjack methods
   resetBlackjack() {
     this.blackjack = {
@@ -397,9 +568,33 @@ class GameState {
     };
   }
 
+  // Drag racing methods
+  isDragActive() {
+    return this.drag.active || this.drag.collectingBets;
+  }
+
+  resetDrag() {
+    if (this.drag.gameLoop) {
+      clearInterval(this.drag.gameLoop);
+    }
+    this.drag = {
+      active: false,
+      host: null,
+      hostUsername: null,
+      collectingBets: false,
+      racers: new Map(),
+      potholes: [],
+      trackLength: 1000,
+      gameLoop: null,
+      countdown: 0,
+      raceStartTime: null,
+      finishOrder: []
+    };
+  }
+
   // Check if any game is active
   isAnyGameActive() {
-    return this.isBlackjackActive() || this.isRaceActive() || this.isSnakeActive() || this.isFlashActive();
+    return this.isBlackjackActive() || this.isRaceActive() || this.isSnakeActive() || this.isFlashActive() || this.isDragActive();
   }
 
   getActiveGame() {
@@ -407,6 +602,7 @@ class GameState {
     if (this.isRaceActive()) return 'race';
     if (this.isSnakeActive()) return 'snake';
     if (this.isFlashActive()) return 'flash';
+    if (this.isDragActive()) return 'drag';
     return null;
   }
 }

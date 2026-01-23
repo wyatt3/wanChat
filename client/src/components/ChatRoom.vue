@@ -96,6 +96,14 @@
         @quit="handleFlashQuit"
         @frame="handleFlashFrame"
       />
+      <DragRace
+        v-if="gameState.activeGame === 'drag'"
+        :gameState="gameState.drag"
+        :username="username"
+        @send="handleSend"
+        @drag-input="handleDragInput"
+        @drag-nitro="handleDragNitro"
+      />
     </div>
 
     <div class="main-content">
@@ -140,6 +148,7 @@ import BlackjackTable from './games/BlackjackTable.vue'
 import RaceTrack from './games/RaceTrack.vue'
 import SnakeGame from './games/SnakeGame.vue'
 import FlashGame from './games/FlashGame.vue'
+import DragRace from './games/DragRace.vue'
 
 const props = defineProps({
   messages: {
@@ -172,7 +181,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['send', 'snake-input', 'snake-quit', 'flash-quit', 'flash-frame', 'change-skin', 'local-message'])
+const emit = defineEmits(['send', 'snake-input', 'snake-quit', 'flash-quit', 'flash-frame', 'change-skin', 'local-message', 'drag-input', 'drag-nitro'])
 const updating = ref(false)
 
 // Generate consistent color from username
@@ -224,6 +233,14 @@ function handleFlashQuit() {
 
 function handleFlashFrame(frameData) {
   emit('flash-frame', frameData)
+}
+
+function handleDragInput(lane) {
+  emit('drag-input', lane)
+}
+
+function handleDragNitro() {
+  emit('drag-nitro')
 }
 
 async function handleUpdate() {

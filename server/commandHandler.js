@@ -7,6 +7,8 @@ const racingCommands = require('./commands/racing');
 const snakeCommands = require('./commands/snake');
 const flashCommands = require('./commands/flash');
 const storeCommands = require('./commands/store');
+const carsCommands = require('./commands/cars');
+const dragCommands = require('./commands/dragracing');
 
 class CommandHandler {
   constructor(io, gameState, users, getTimestamp) {
@@ -80,6 +82,7 @@ class CommandHandler {
       io: this.io,
       gameState: this.gameState,
       users: this.users,
+      connectedUsers: this.users,  // Alias for compatibility
       handler: this,
       getTimestamp: this.getTimestamp
     };
@@ -136,6 +139,55 @@ class CommandHandler {
         return storeCommands.cleanitemdatabase(ctx);
       case '/nukeallinventories':
         return storeCommands.nukeallinventories(ctx);
+
+      // Car/Dealership commands
+      case '/dealership':
+      case '/dealer':
+      case '/cars':
+        return carsCommands.dealership(ctx);
+      case '/garage':
+        return carsCommands.garage(ctx, argsStr || null);
+      case '/garages':
+        return carsCommands.garages(ctx);
+      case '/buycar':
+        return carsCommands.buycar(ctx, argsStr);
+      case '/sellcar':
+        return carsCommands.sellcar(ctx, argsStr);
+      case '/givecar':
+        return carsCommands.givecar(ctx, argsStr);
+      case '/appraisecar':
+        return carsCommands.appraisecar(ctx, argsStr);
+      case '/refreshdealership':
+        return carsCommands.refreshdealership(ctx);
+      case '/carspecs':
+      case '/specs':
+        return carsCommands.carspecs(ctx, argsStr);
+
+      // Drag Racing commands
+      case '/drag':
+        return dragCommands.drag(ctx);
+      case '/dragbet':
+      case '/dbet':
+        return dragCommands.dragbet(ctx, argsStr);
+      case '/dragpass':
+      case '/dpass':
+        return dragCommands.dragpass(ctx);
+      case '/dragstart':
+      case '/dstart':
+        return dragCommands.dragstart(ctx);
+      case '/dragcancel':
+      case '/dcancel':
+        return dragCommands.dragcancel(ctx);
+      case '/left':
+      case '/l':
+        return dragCommands.left(ctx);
+      case '/right':
+      case '/r':
+        return dragCommands.right(ctx);
+      case '/nitro':
+      case '/n':
+      case '/nos':
+        return dragCommands.nitro(ctx);
 
       // Fun commands
       case '/fart':
