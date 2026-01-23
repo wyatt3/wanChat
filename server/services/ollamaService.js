@@ -60,27 +60,29 @@ async function ollamaRequest(prompt, options = {}, debug = null) {
           // Try to extract content outside of think tags first
           let response = fullResponse.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
 
-          // If response is empty after removing think tags, try to find JSON inside the think tags
-          if (!response || response.length === 0) {
-            log(`Empty after stripping think tags, checking inside...`);
-            // Look for JSON inside the think tags - use greedy match to get ALL content
-            const thinkMatch = fullResponse.match(/<think>([\s\S]*)<\/think>/);
-            if (thinkMatch) {
-              log(`Found think content (${thinkMatch[1].length} chars)`);
-              // Try to find JSON object in the thinking
-              const jsonInThink = thinkMatch[1].match(/\{[\s\S]*?"value"[\s\S]*?"reason"[\s\S]*?\}/);
-              if (jsonInThink) {
-                log(`Found JSON in think tags!`);
-                response = jsonInThink[0];
-              } else {
-                log(`No JSON found in think content`);
-              }
+          // If response is empty or doesn't contain valid JSON, search more aggressively
+          if (!response || response.length === 0 || !response.includes('"value"')) {
+            log(`Looking for JSON in full response...`);
+
+            // Try to find ANY JSON with value and reason anywhere in the full response
+            const jsonAnywhere = fullResponse.match(/\{[^{}]*"value"\s*:\s*\d+[^{}]*"reason"\s*:\s*"[^"]+"/);
+            if (jsonAnywhere) {
+              log(`Found JSON pattern in response!`);
+              // Complete the JSON object
+              response = jsonAnywhere[0] + '"}';
             } else {
-              log(`No think tags found`);
-              // Maybe the response IS the JSON without any tags
-              if (fullResponse.includes('"value"') && fullResponse.includes('"reason"')) {
-                log(`Response might be raw JSON, using as-is`);
-                response = fullResponse;
+              // Try to extract value and reason separately
+              const valueMatch = fullResponse.match(/"value"\s*:\s*(\d+)/);
+              const reasonMatch = fullResponse.match(/"reason"\s*:\s*"([^"]+)"/);
+
+              if (valueMatch && reasonMatch) {
+                log(`Extracted value=${valueMatch[1]}, reason="${reasonMatch[1]}"`);
+                response = `{"value": ${valueMatch[1]}, "reason": "${reasonMatch[1]}"}`;
+              } else if (valueMatch) {
+                log(`Found only value=${valueMatch[1]}, no reason`);
+                response = `{"value": ${valueMatch[1]}, "reason": "The appraiser was speechless."}`;
+              } else {
+                log(`Could not extract JSON from response`);
               }
             }
           }
@@ -170,33 +172,16 @@ async function appraiseItem(itemName, itemDescription, itemEmoji, originalPrice,
 
   log(`Starting AI appraisal for: ${itemName}`);
 
-  const prompt = `You are a dramatic, eccentric antiques appraiser with a flair for absurd explanations. A customer brought in:
+  const prompt = `Appraise this item. Output ONLY a JSON object, nothing else. Do not think out loud. Do not use <think> tags. Just output the JSON directly.
 
 Item: ${itemEmoji || ''} ${itemName}
 Description: ${itemDescription || 'No description'}
-Category: ${category}
 Original price: $${originalPrice}
 
-IMPORTANT: Your reason MUST directly reference the specific item ("${itemName}") and its characteristics. Be funny and creative! The reason should only make sense for THIS exact item.
+Pick a random value between $1 and $10,000,000. Write a funny one-sentence reason specific to "${itemName}".
 
-The value can range from $1 to $10,000,000. Be unpredictable!
-
-Respond with ONLY this JSON (no other text):
-{"value": NUMBER, "reason": "One dramatic sentence about THIS SPECIFIC item"}
-
-GOOD examples (notice how each reason is specific to that item):
-- Stuffed Panda: "Pandas are no longer endangered so demand has plummeted!"
-- Ancient Coin: "This coin was used to pay Julius Caesar's barber - priceless!"
-- Gaming Mouse: "Turns out this mouse was used to win a $2 million esports tournament!"
-- Pet Rock: "DNA testing confirms this rock witnessed the dinosaur extinction."
-- Banana: "This is THE banana from the $120,000 art exhibit... someone ate the original."
-- Crown Title: "The previous owner was dethroned in a coup - now it's bad luck."
-- Void Fragment: "The void stared back and liked what it saw - collectors are terrified."
-
-BAD examples (too generic, could apply to anything):
-- "This is quite valuable!"
-- "Unfortunately it's a fake."
-- "Market conditions have changed."`;
+Output format (ONLY this, no other text):
+{"value": NUMBER, "reason": "funny sentence about ${itemName}"}`;
 
   try {
     log(`Sending request to Ollama at ${OLLAMA_HOST}:${OLLAMA_PORT}...`);
