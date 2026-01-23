@@ -130,6 +130,8 @@ class CommandHandler {
       case '/inventories':
       case '/invs':
         return storeCommands.inventories(ctx);
+      case '/refreshstore':
+        return storeCommands.refreshstore(ctx);
 
       // Fun commands
       case '/fart':

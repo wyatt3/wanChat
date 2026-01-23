@@ -193,12 +193,21 @@ class GameState {
     return appraisal ? appraisal.value : null;
   }
 
-  setAppraisedValue(username, itemId, value) {
+  // Get full appraisal data including reason (for transfers)
+  getAppraisedData(username, itemId) {
+    const userAppraisals = this.appraisals.get(username);
+    if (!userAppraisals) return null;
+    const appraisal = userAppraisals.get(itemId);
+    return appraisal || null;
+  }
+
+  setAppraisedValue(username, itemId, value, reason = null) {
     if (!this.appraisals.has(username)) {
       this.appraisals.set(username, new Map());
     }
     this.appraisals.get(username).set(itemId, {
       value: value,
+      reason: reason,
       appraisedAt: Date.now()
     });
     this.saveAppraisals();

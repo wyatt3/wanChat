@@ -1,5 +1,6 @@
 // Store commands: /store, /buy, /inventory
 const storeConfig = require('../data/storeConfig');
+const ollamaService = require('../services/ollamaService');
 
 // Format price with commas
 function formatPrice(price) {
@@ -22,10 +23,18 @@ function getInventoryDisplayOrder(inventory) {
 }
 
 // Find who owns an item (returns username or null)
+// Also checks pending appraisals - items being appraised are still "owned"
 function findItemOwner(gameState, itemId) {
+  // Check inventories
   for (const [ownerName, items] of gameState.inventories.entries()) {
     if (items.includes(itemId)) {
       return ownerName;
+    }
+  }
+  // Check pending appraisals - items being appraised are still owned
+  for (const [appraisalId, pending] of gameState.pendingAppraisals.entries()) {
+    if (pending.itemId === itemId) {
+      return pending.username;
     }
   }
   return null;
@@ -36,14 +45,10 @@ function store(ctx) {
   const items = storeConfig.getAvailableItems();
   const balance = gameState.getBalance(username);
 
-  // Calculate time until next refresh (next 15-min mark)
-  const now = new Date();
-  const minutes = now.getMinutes();
-  const seconds = now.getSeconds();
-  const minutesUntilRefresh = 15 - (minutes % 15) - (seconds > 0 ? 1 : 0);
-  const secondsUntilRefresh = seconds > 0 ? 60 - seconds : 0;
-  const refreshTime = minutesUntilRefresh > 0 || secondsUntilRefresh > 0
-    ? `${minutesUntilRefresh}m ${secondsUntilRefresh.toString().padStart(2, '0')}s`
+  // Get time until next AI refresh
+  const refresh = storeConfig.getTimeUntilRefresh();
+  const refreshTime = refresh.minutes > 0 || refresh.seconds > 0
+    ? `${refresh.minutes}m ${refresh.seconds.toString().padStart(2, '0')}s`
     : 'now';
 
   const raritySymbols = {
@@ -56,7 +61,7 @@ function store(ctx) {
   };
 
   handler.sendToSocket(socket, '┌────────────────────────────────────────────┐');
-  handler.sendToSocket(socket, '│              WANCHAT STORE                 │');
+  handler.sendToSocket(socket, '│          WANCHAT STORE (AI-Gen)            │');
   handler.sendToSocket(socket, '├────────────────────────────────────────────┤');
   handler.sendToSocket(socket, `│  Your balance: $${formatPrice(balance)}`);
   handler.sendToSocket(socket, '├────────────────────────────────────────────┤');
@@ -578,35 +583,47 @@ function startAppraisalTimer(appraisalId, gameState, io, handler) {
   appraisalTimers.set(appraisalId, timer);
 }
 
-function completeAppraisal(appraisalId, gameState, io, handler) {
+async function completeAppraisal(appraisalId, gameState, io, handler) {
   const pending = gameState.pendingAppraisals.get(appraisalId);
   if (!pending) return;
 
   const { username, itemId, originalPrice } = pending;
   const item = storeConfig.getItem(itemId);
 
-  // Generate the appraised value
-  const appraisedValue = generateAppraisedValue(originalPrice);
+  const emoji = item ? item.emoji || '' : '';
+  const itemName = item ? item.name : itemId;
+  const itemDescription = item ? item.description || '' : '';
+  const category = item ? item.category || 'collectible' : 'collectible';
+
+  // Use AI to appraise the item
+  handler.broadcast(`📋 Appraiser is evaluating ${username}'s ${emoji} ${itemName}...`);
+
+  let appraisedValue, reason;
+  try {
+    const result = await ollamaService.appraiseItem(itemName, itemDescription, emoji, originalPrice, category);
+    appraisedValue = result.value;
+    reason = result.reason;
+  } catch (error) {
+    console.error('AI appraisal failed:', error.message);
+    // Fallback to random
+    appraisedValue = generateAppraisedValue(originalPrice);
+    reason = generateAppraisalReason(originalPrice, appraisedValue, itemName);
+  }
 
   // Return item to inventory
   gameState.addToInventory(username, itemId);
 
-  // Set the appraised value
-  gameState.setAppraisedValue(username, itemId, appraisedValue);
+  // Set the appraised value (stored by itemId, will transfer with item)
+  gameState.setAppraisedValue(username, itemId, appraisedValue, reason);
 
   // Remove from pending
   gameState.removePendingAppraisal(appraisalId);
 
   // Broadcast the result
-  const emoji = item ? item.emoji || '' : '';
-  const itemName = item ? item.name : itemId;
   const percentChange = ((appraisedValue - originalPrice) / originalPrice * 100).toFixed(0);
   const changeText = appraisedValue >= originalPrice
     ? `+${percentChange}%`
     : `${percentChange}%`;
-
-  // Generate reason for the value change
-  const reason = generateAppraisalReason(originalPrice, appraisedValue, itemName);
 
   let announcement;
   if (appraisedValue >= originalPrice * 10) {
@@ -825,8 +842,16 @@ function giveitem(ctx) {
   gameState.removeFromInventory(username, item.id);
   gameState.addToInventory(targetUser, item.id);
 
+  // Transfer appraisal if it exists (appraisals stay with the item)
+  const appraisedData = gameState.getAppraisedData(username, item.id);
+  if (appraisedData) {
+    gameState.clearAppraisedValue(username, item.id);
+    gameState.setAppraisedValue(targetUser, item.id, appraisedData.value, appraisedData.reason);
+  }
+
   const emoji = item.emoji || '';
-  handler.broadcast(`${username} gave ${emoji} ${item.name} to ${targetUser}!`);
+  const appraisedNote = appraisedData ? ' (appraised)' : '';
+  handler.broadcast(`${username} gave ${emoji} ${item.name}${appraisedNote} to ${targetUser}!`);
 
   return true;
 }
@@ -885,6 +910,25 @@ function inventories(ctx) {
   return true;
 }
 
+async function refreshstore(ctx) {
+  const { handler, socket } = ctx;
+
+  if (storeConfig.isGenerating()) {
+    handler.sendToSocket(socket, 'Store refresh already in progress...');
+    return true;
+  }
+
+  handler.sendToSocket(socket, '🏪 Requesting new AI-generated items...');
+
+  try {
+    await storeConfig.forceRefresh((msg) => handler.broadcast(msg));
+  } catch (error) {
+    handler.sendToSocket(socket, 'Failed to refresh store: ' + error.message);
+  }
+
+  return true;
+}
+
 module.exports = {
   store,
   buy,
@@ -895,5 +939,6 @@ module.exports = {
   unequip,
   giveitem,
   appraise,
+  refreshstore,
   restoreAppraisalTimers
 };
