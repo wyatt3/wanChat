@@ -172,10 +172,20 @@ io.on('connection', (socket) => {
       if (trimmed.startsWith('/')) {
         commandHandler.parse(socket, trimmed);
       } else {
-        // Get equipped title prefix if any
-        const equippedTitleId = gameState.getEquippedTitle(username);
-        const equippedTitle = equippedTitleId ? storeConfig.getItem(equippedTitleId) : null;
-        const displayName = equippedTitle ? `${equippedTitle.prefix} ${username}` : username;
+        // Get equipped title prefix if any (stored by name now)
+        const equippedTitleName = gameState.getEquippedTitle(username);
+        let displayName = username;
+        if (equippedTitleName) {
+          // Find the title in user's inventory by name
+          const inventory = gameState.getInventory(username);
+          const title = inventory.find(item =>
+            item && typeof item === 'object' && item.name &&
+            item.name.toLowerCase() === equippedTitleName.toLowerCase()
+          );
+          if (title && title.prefix) {
+            displayName = `${title.prefix} ${username}`;
+          }
+        }
 
         io.emit('chat', {
           user: displayName,

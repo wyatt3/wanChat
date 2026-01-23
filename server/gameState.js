@@ -138,6 +138,7 @@ class GameState {
   }
 
   // Inventory methods
+  // Inventory now stores full item objects, not just IDs
   getInventory(username) {
     if (!this.inventories.has(username)) {
       this.inventories.set(username, []);
@@ -145,15 +146,28 @@ class GameState {
     return this.inventories.get(username);
   }
 
-  addToInventory(username, itemId) {
+  // Add full item object to inventory
+  addToInventory(username, item) {
     const inventory = this.getInventory(username);
-    inventory.push(itemId);
+    // If item is a string (old format), just store it as-is for backwards compat
+    if (typeof item === 'string') {
+      inventory.push(item);
+    } else {
+      // Store full item object
+      inventory.push({ ...item });
+    }
     this.saveInventories();
   }
 
-  removeFromInventory(username, itemId) {
+  // Remove item by name (case insensitive)
+  removeFromInventory(username, itemName) {
     const inventory = this.getInventory(username);
-    const idx = inventory.indexOf(itemId);
+    const idx = inventory.findIndex(item => {
+      if (typeof item === 'string') {
+        return item.toLowerCase() === itemName.toLowerCase();
+      }
+      return item.name && item.name.toLowerCase() === itemName.toLowerCase();
+    });
     if (idx !== -1) {
       inventory.splice(idx, 1);
       this.saveInventories();
@@ -162,17 +176,28 @@ class GameState {
     return false;
   }
 
+  // Check if user has item by name
+  hasItem(username, itemName) {
+    const inventory = this.getInventory(username);
+    return inventory.some(item => {
+      if (typeof item === 'string') {
+        return item.toLowerCase() === itemName.toLowerCase();
+      }
+      return item.name && item.name.toLowerCase() === itemName.toLowerCase();
+    });
+  }
+
   saveInventories() {
     persistence.saveInventories(this.inventories);
   }
 
-  // Equipped title methods
+  // Equipped title methods (uses item name, not ID)
   getEquippedTitle(username) {
     return this.equippedTitles.get(username) || null;
   }
 
-  setEquippedTitle(username, titleId) {
-    this.equippedTitles.set(username, titleId);
+  setEquippedTitle(username, titleName) {
+    this.equippedTitles.set(username, titleName);
     this.saveEquipped();
   }
 
@@ -185,27 +210,45 @@ class GameState {
     persistence.saveEquipped(this.equippedTitles);
   }
 
-  // Appraisal methods
-  getAppraisedValue(username, itemId) {
+  // Appraisal methods (uses item name, not ID)
+  getAppraisedValue(username, itemName) {
     const userAppraisals = this.appraisals.get(username);
     if (!userAppraisals) return null;
-    const appraisal = userAppraisals.get(itemId);
+    // Try exact match first, then case-insensitive
+    let appraisal = userAppraisals.get(itemName);
+    if (!appraisal) {
+      // Case-insensitive search
+      for (const [key, val] of userAppraisals.entries()) {
+        if (key.toLowerCase() === itemName.toLowerCase()) {
+          appraisal = val;
+          break;
+        }
+      }
+    }
     return appraisal ? appraisal.value : null;
   }
 
   // Get full appraisal data including reason (for transfers)
-  getAppraisedData(username, itemId) {
+  getAppraisedData(username, itemName) {
     const userAppraisals = this.appraisals.get(username);
     if (!userAppraisals) return null;
-    const appraisal = userAppraisals.get(itemId);
+    let appraisal = userAppraisals.get(itemName);
+    if (!appraisal) {
+      for (const [key, val] of userAppraisals.entries()) {
+        if (key.toLowerCase() === itemName.toLowerCase()) {
+          appraisal = val;
+          break;
+        }
+      }
+    }
     return appraisal || null;
   }
 
-  setAppraisedValue(username, itemId, value, reason = null) {
+  setAppraisedValue(username, itemName, value, reason = null) {
     if (!this.appraisals.has(username)) {
       this.appraisals.set(username, new Map());
     }
-    this.appraisals.get(username).set(itemId, {
+    this.appraisals.get(username).set(itemName, {
       value: value,
       reason: reason,
       appraisedAt: Date.now()
@@ -213,10 +256,21 @@ class GameState {
     this.saveAppraisals();
   }
 
-  clearAppraisedValue(username, itemId) {
+  clearAppraisedValue(username, itemName) {
     const userAppraisals = this.appraisals.get(username);
     if (userAppraisals) {
-      userAppraisals.delete(itemId);
+      // Try exact match first
+      if (userAppraisals.has(itemName)) {
+        userAppraisals.delete(itemName);
+      } else {
+        // Case-insensitive search
+        for (const key of userAppraisals.keys()) {
+          if (key.toLowerCase() === itemName.toLowerCase()) {
+            userAppraisals.delete(key);
+            break;
+          }
+        }
+      }
       this.saveAppraisals();
     }
   }

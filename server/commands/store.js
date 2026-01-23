@@ -8,13 +8,18 @@ function formatPrice(price) {
 }
 
 // Build inventory items in display order (grouped by category)
+// Inventory now stores full item objects
 function getInventoryDisplayOrder(inventory) {
-  const items = inventory.map(id => storeConfig.getItem(id)).filter(Boolean);
+  // Filter out any invalid items and ensure they're objects
+  const items = inventory.filter(item => item && typeof item === 'object' && item.name);
   const byCategory = { title: [], collectible: [], effect: [], consumable: [] };
 
   items.forEach(item => {
-    if (byCategory[item.category]) {
-      byCategory[item.category].push(item);
+    const cat = item.category || 'collectible';
+    if (byCategory[cat]) {
+      byCategory[cat].push(item);
+    } else {
+      byCategory.collectible.push(item);
     }
   });
 
@@ -22,18 +27,24 @@ function getInventoryDisplayOrder(inventory) {
   return [...byCategory.title, ...byCategory.collectible, ...byCategory.effect, ...byCategory.consumable];
 }
 
-// Find who owns an item (returns username or null)
+// Find who owns an item by NAME (returns username or null)
 // Also checks pending appraisals - items being appraised are still "owned"
-function findItemOwner(gameState, itemId) {
-  // Check inventories
+function findItemOwner(gameState, itemName) {
+  const nameLower = itemName.toLowerCase();
+
+  // Check inventories (now stores full objects)
   for (const [ownerName, items] of gameState.inventories.entries()) {
-    if (items.includes(itemId)) {
-      return ownerName;
+    for (const item of items) {
+      if (typeof item === 'object' && item.name && item.name.toLowerCase() === nameLower) {
+        return ownerName;
+      }
+      // Backwards compat: if item is a string (old format ID), skip
     }
   }
+
   // Check pending appraisals - items being appraised are still owned
   for (const [appraisalId, pending] of gameState.pendingAppraisals.entries()) {
-    if (pending.itemId === itemId) {
+    if (pending.itemName && pending.itemName.toLowerCase() === nameLower) {
       return pending.username;
     }
   }
@@ -72,8 +83,8 @@ function store(ctx) {
     const price = `$${formatPrice(item.price)}`;
     const name = item.name.length > 30 ? item.name.substring(0, 28) + '..' : item.name;
 
-    // Check if anyone owns this item
-    const owner = findItemOwner(gameState, item.id);
+    // Check if anyone owns this item BY NAME
+    const owner = findItemOwner(gameState, item.name);
     let status = '';
     if (owner) {
       if (owner.toLowerCase() === username.toLowerCase()) {
@@ -123,8 +134,8 @@ function buy(ctx) {
     return true;
   }
 
-  // Check if anyone owns this item (items are globally unique)
-  const owner = findItemOwner(gameState, item.id);
+  // Check if anyone owns this item BY NAME (items are globally unique by name)
+  const owner = findItemOwner(gameState, item.name);
   if (owner) {
     if (owner.toLowerCase() === username.toLowerCase()) {
       handler.sendToSocket(socket, `You already own ${item.name}!`);
@@ -141,9 +152,9 @@ function buy(ctx) {
     return true;
   }
 
-  // Make purchase
+  // Make purchase - store FULL ITEM OBJECT (not just ID)
   gameState.subtractBalance(username, item.price);
-  gameState.addToInventory(username, item.id);
+  gameState.addToInventory(username, item);
 
   const emoji = item.emoji || '';
   handler.broadcast(`${username} purchased ${emoji} ${item.name} for $${item.price}!`);
@@ -191,7 +202,7 @@ function inventory(ctx) {
   handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
 
   const displayItems = getInventoryDisplayOrder(items);
-  const equippedTitleId = isOwn ? gameState.getEquippedTitle(username) : null;
+  const equippedTitleName = isOwn ? gameState.getEquippedTitle(username) : null;
 
   const categoryNames = {
     title: 'TITLES',
@@ -216,12 +227,13 @@ function inventory(ctx) {
     if (item.category === 'title') hasTitles = true;
 
     const emoji = item.emoji || ' ';
-    // Check for appraised value
-    const appraisedValue = gameState.getAppraisedValue(targetUser, item.id);
+    // Check for appraised value BY NAME
+    const appraisedValue = gameState.getAppraisedValue(targetUser, item.name);
     const sellValue = appraisedValue !== null ? appraisedValue : Math.floor(item.price * 0.5);
     const appraisedMarker = appraisedValue !== null ? '!' : ' ';
     if (appraisedValue !== null) hasAppraised = true;
-    const equipped = (item.id === equippedTitleId) ? '*' : ' ';
+    // Check equipped by name (case insensitive)
+    const equipped = (equippedTitleName && item.name.toLowerCase() === equippedTitleName.toLowerCase()) ? '*' : ' ';
     const name = item.name.length > 30 ? item.name.substring(0, 28) + '..' : item.name;
     handler.sendToSocket(socket, `│${appraisedMarker}${equipped}${(idx + 1).toString().padStart(2)}. ${emoji} ${name.padEnd(30)} ($${formatPrice(sellValue)})`);
   });
@@ -272,8 +284,7 @@ function sell(ctx) {
     // Try matching by name (case insensitive, partial match)
     const searchTerm = args.join(' ').toLowerCase();
     item = displayItems.find(i =>
-      i.name.toLowerCase().includes(searchTerm) ||
-      i.id.toLowerCase().includes(searchTerm)
+      i.name.toLowerCase().includes(searchTerm)
     );
   }
 
@@ -282,24 +293,24 @@ function sell(ctx) {
     return true;
   }
 
-  // If selling equipped title, unequip it first
-  const equippedTitleId = gameState.getEquippedTitle(username);
-  if (item.id === equippedTitleId) {
+  // If selling equipped title, unequip it first (check by name)
+  const equippedTitleName = gameState.getEquippedTitle(username);
+  if (equippedTitleName && item.name.toLowerCase() === equippedTitleName.toLowerCase()) {
     gameState.clearEquippedTitle(username);
   }
 
   // Calculate sell price - use appraised value if available, otherwise 50% of original
-  const appraisedValue = gameState.getAppraisedValue(username, item.id);
+  const appraisedValue = gameState.getAppraisedValue(username, item.name);
   const sellPrice = appraisedValue !== null ? appraisedValue : Math.floor(item.price * 0.5);
   const isAppraised = appraisedValue !== null;
 
-  // Remove from inventory and add balance
-  gameState.removeFromInventory(username, item.id);
+  // Remove from inventory BY NAME and add balance
+  gameState.removeFromInventory(username, item.name);
   gameState.addBalance(username, sellPrice);
 
   // Clear the appraisal value since item is sold
   if (isAppraised) {
-    gameState.clearAppraisedValue(username, item.id);
+    gameState.clearAppraisedValue(username, item.name);
   }
 
   const emoji = item.emoji || '';
@@ -351,7 +362,7 @@ function equip(ctx) {
     const searchTerm = args.join(' ').toLowerCase();
     title = ownedTitles.find(t =>
       t.name.toLowerCase().includes(searchTerm) ||
-      t.prefix.toLowerCase().includes(searchTerm)
+      (t.prefix && t.prefix.toLowerCase().includes(searchTerm))
     );
   }
 
@@ -360,7 +371,8 @@ function equip(ctx) {
     return true;
   }
 
-  gameState.setEquippedTitle(username, title.id);
+  // Store by NAME, not ID
+  gameState.setEquippedTitle(username, title.name);
   handler.sendToSocket(socket, `Equipped ${title.prefix} title! Your name will now show as: ${title.prefix} ${username}`);
 
   return true;
@@ -369,13 +381,17 @@ function equip(ctx) {
 function unequip(ctx) {
   const { handler, socket, username, gameState } = ctx;
 
-  const currentTitle = gameState.getEquippedTitle(username);
-  if (!currentTitle) {
+  const currentTitleName = gameState.getEquippedTitle(username);
+  if (!currentTitleName) {
     handler.sendToSocket(socket, 'You don\'t have a title equipped.');
     return true;
   }
 
-  const title = storeConfig.getItem(currentTitle);
+  // Find the title in inventory to get its prefix
+  const inventory = gameState.getInventory(username);
+  const displayItems = getInventoryDisplayOrder(inventory);
+  const title = displayItems.find(i => i.name.toLowerCase() === currentTitleName.toLowerCase());
+
   gameState.clearEquippedTitle(username);
   handler.sendToSocket(socket, `Unequipped ${title ? title.prefix : 'your'} title.`);
 
@@ -587,34 +603,34 @@ async function completeAppraisal(appraisalId, gameState, io, handler) {
   const pending = gameState.pendingAppraisals.get(appraisalId);
   if (!pending) return;
 
-  const { username, itemId, originalPrice } = pending;
-  const item = storeConfig.getItem(itemId);
+  // Pending now stores full item object
+  const { username, item: storedItem, originalPrice, itemName } = pending;
 
-  const emoji = item ? item.emoji || '' : '';
-  const itemName = item ? item.name : itemId;
-  const itemDescription = item ? item.description || '' : '';
-  const category = item ? item.category || 'collectible' : 'collectible';
+  const emoji = storedItem ? storedItem.emoji || '' : '';
+  const displayName = storedItem ? storedItem.name : itemName;
+  const itemDescription = storedItem ? storedItem.description || '' : '';
+  const category = storedItem ? storedItem.category || 'collectible' : 'collectible';
 
   // Appraise the item
-  handler.broadcast(`📋 Appraiser is evaluating ${username}'s ${emoji} ${itemName}...`);
+  handler.broadcast(`📋 Appraiser is evaluating ${username}'s ${emoji} ${displayName}...`);
 
   let appraisedValue, reason;
   try {
-    const result = await ollamaService.appraiseItem(itemName, itemDescription, emoji, originalPrice, category);
+    const result = await ollamaService.appraiseItem(displayName, itemDescription, emoji, originalPrice, category);
     appraisedValue = result.value;
     reason = result.reason;
   } catch (error) {
     console.error('AI appraisal failed:', error.message);
     // Fallback to random
     appraisedValue = generateAppraisedValue(originalPrice);
-    reason = generateAppraisalReason(originalPrice, appraisedValue, itemName);
+    reason = generateAppraisalReason(originalPrice, appraisedValue, displayName);
   }
 
-  // Return item to inventory
-  gameState.addToInventory(username, itemId);
+  // Return FULL ITEM OBJECT to inventory
+  gameState.addToInventory(username, storedItem);
 
-  // Set the appraised value (stored by itemId, will transfer with item)
-  gameState.setAppraisedValue(username, itemId, appraisedValue, reason);
+  // Set the appraised value BY NAME (will transfer with item)
+  gameState.setAppraisedValue(username, displayName, appraisedValue, reason);
 
   // Remove from pending
   gameState.removePendingAppraisal(appraisalId);
@@ -627,15 +643,15 @@ async function completeAppraisal(appraisalId, gameState, io, handler) {
 
   let announcement;
   if (appraisedValue >= originalPrice * 10) {
-    announcement = `🎉 JACKPOT! ${username}'s ${emoji} ${itemName} appraised at $${formatPrice(appraisedValue)}! (${changeText})`;
+    announcement = `🎉 JACKPOT! ${username}'s ${emoji} ${displayName} appraised at $${formatPrice(appraisedValue)}! (${changeText})`;
   } else if (appraisedValue >= originalPrice * 2) {
-    announcement = `✨ ${username}'s ${emoji} ${itemName} appraised at $${formatPrice(appraisedValue)}! (${changeText})`;
+    announcement = `✨ ${username}'s ${emoji} ${displayName} appraised at $${formatPrice(appraisedValue)}! (${changeText})`;
   } else if (appraisedValue >= originalPrice) {
-    announcement = `${username}'s ${emoji} ${itemName} appraised at $${formatPrice(appraisedValue)} (${changeText})`;
+    announcement = `${username}'s ${emoji} ${displayName} appraised at $${formatPrice(appraisedValue)} (${changeText})`;
   } else if (appraisedValue >= originalPrice * 0.5) {
-    announcement = `${username}'s ${emoji} ${itemName} appraised at $${formatPrice(appraisedValue)} (${changeText})`;
+    announcement = `${username}'s ${emoji} ${displayName} appraised at $${formatPrice(appraisedValue)} (${changeText})`;
   } else {
-    announcement = `💔 ${username}'s ${emoji} ${itemName} appraised at only $${formatPrice(appraisedValue)}... (${changeText})`;
+    announcement = `💔 ${username}'s ${emoji} ${displayName} appraised at only $${formatPrice(appraisedValue)}... (${changeText})`;
   }
 
   handler.broadcast(announcement);
@@ -657,7 +673,7 @@ function appraise(ctx) {
     const pending = gameState.getPendingAppraisalsForUser(username);
     if (pending.length === 0) {
       handler.sendToSocket(socket, 'Usage: /appraise [item # from /inventory]');
-      handler.sendToSocket(socket, 'Costs 25% of item value. Returns in 1-60 minutes with new value.');
+      handler.sendToSocket(socket, 'Costs 25% of item value. Returns in 1-30 minutes with new value.');
       return true;
     }
 
@@ -666,9 +682,10 @@ function appraise(ctx) {
     handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
 
     pending.forEach(p => {
-      const item = storeConfig.getItem(p.itemId);
-      const itemName = item ? item.name : p.itemId;
-      const emoji = item ? item.emoji || '' : '';
+      // Pending now stores full item object
+      const storedItem = p.item;
+      const itemName = storedItem ? storedItem.name : p.itemName;
+      const emoji = storedItem ? storedItem.emoji || '' : '';
       const now = Date.now();
       const remaining = Math.max(0, p.returnTime - now);
       const mins = Math.floor(remaining / 60000);
@@ -697,8 +714,7 @@ function appraise(ctx) {
   } else {
     const searchTerm = args.join(' ').toLowerCase();
     item = displayItems.find(i =>
-      i.name.toLowerCase().includes(searchTerm) ||
-      i.id.toLowerCase().includes(searchTerm)
+      i.name.toLowerCase().includes(searchTerm)
     );
   }
 
@@ -707,9 +723,9 @@ function appraise(ctx) {
     return true;
   }
 
-  // Check if item is already being appraised
+  // Check if item is already being appraised BY NAME
   const pending = gameState.getPendingAppraisalsForUser(username);
-  if (pending.some(p => p.itemId === item.id)) {
+  if (pending.some(p => p.itemName && p.itemName.toLowerCase() === item.name.toLowerCase())) {
     handler.sendToSocket(socket, 'This item is already being appraised!');
     return true;
   }
@@ -723,32 +739,33 @@ function appraise(ctx) {
     return true;
   }
 
-  // If appraising equipped title, unequip it first
-  const equippedTitleId = gameState.getEquippedTitle(username);
-  if (item.id === equippedTitleId) {
+  // If appraising equipped title, unequip it first (check by name)
+  const equippedTitleName = gameState.getEquippedTitle(username);
+  if (equippedTitleName && item.name.toLowerCase() === equippedTitleName.toLowerCase()) {
     gameState.clearEquippedTitle(username);
   }
 
   // Deduct fee
   gameState.subtractBalance(username, fee);
 
-  // Remove item from inventory
-  gameState.removeFromInventory(username, item.id);
+  // Remove item from inventory BY NAME
+  gameState.removeFromInventory(username, item.name);
 
   // Clear any existing appraisal value (will get new one when returned)
-  gameState.clearAppraisedValue(username, item.id);
+  gameState.clearAppraisedValue(username, item.name);
 
-  // Set random return time (1-60 minutes)
+  // Set random return time (1-30 minutes)
   const waitMinutes = 1 + Math.floor(Math.random() * 30);
   const returnTime = Date.now() + waitMinutes * 60 * 1000;
 
-  // Create unique appraisal ID
-  const appraisalId = `${username}_${item.id}_${Date.now()}`;
+  // Create unique appraisal ID using item name
+  const appraisalId = `${username}_${item.name.replace(/\s+/g, '_')}_${Date.now()}`;
 
-  // Store pending appraisal
+  // Store pending appraisal with FULL ITEM OBJECT
   gameState.addPendingAppraisal(appraisalId, {
     username,
-    itemId: item.id,
+    item: { ...item },  // Store full item object
+    itemName: item.name,
     originalPrice: item.price,
     fee,
     returnTime
@@ -823,8 +840,7 @@ function giveitem(ctx) {
     // Try matching by name (case insensitive, partial match)
     const searchTerm = itemArg.toLowerCase();
     item = displayItems.find(i =>
-      i.name.toLowerCase().includes(searchTerm) ||
-      i.id.toLowerCase().includes(searchTerm)
+      i.name.toLowerCase().includes(searchTerm)
     );
   }
 
@@ -833,21 +849,21 @@ function giveitem(ctx) {
     return true;
   }
 
-  // If giving equipped title, unequip it first
-  const equippedTitleId = gameState.getEquippedTitle(username);
-  if (item.id === equippedTitleId) {
+  // If giving equipped title, unequip it first (check by name)
+  const equippedTitleName = gameState.getEquippedTitle(username);
+  if (equippedTitleName && item.name.toLowerCase() === equippedTitleName.toLowerCase()) {
     gameState.clearEquippedTitle(username);
   }
 
-  // Transfer the item
-  gameState.removeFromInventory(username, item.id);
-  gameState.addToInventory(targetUser, item.id);
+  // Transfer the item BY NAME - remove from sender, add full object to receiver
+  gameState.removeFromInventory(username, item.name);
+  gameState.addToInventory(targetUser, item);
 
-  // Transfer appraisal if it exists (appraisals stay with the item)
-  const appraisedData = gameState.getAppraisedData(username, item.id);
+  // Transfer appraisal if it exists BY NAME (appraisals stay with the item)
+  const appraisedData = gameState.getAppraisedData(username, item.name);
   if (appraisedData) {
-    gameState.clearAppraisedValue(username, item.id);
-    gameState.setAppraisedValue(targetUser, item.id, appraisedData.value, appraisedData.reason);
+    gameState.clearAppraisedValue(username, item.name);
+    gameState.setAppraisedValue(targetUser, item.name, appraisedData.value, appraisedData.reason);
   }
 
   const emoji = item.emoji || '';
@@ -860,11 +876,12 @@ function giveitem(ctx) {
 function inventories(ctx) {
   const { handler, socket, gameState } = ctx;
 
-  // Get all users who have inventories
+  // Get all users who have inventories with valid items
   const allInventories = [];
   for (const [ownerName, items] of gameState.inventories.entries()) {
-    if (items.length > 0) {
-      allInventories.push({ username: ownerName, items });
+    const validItems = getInventoryDisplayOrder(items);
+    if (validItems.length > 0) {
+      allInventories.push({ username: ownerName, items: validItems });
     }
   }
 
@@ -879,18 +896,17 @@ function inventories(ctx) {
   handler.sendToSocket(socket, '│                       ALL INVENTORIES                        │');
   handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
 
-  allInventories.forEach(({ username: ownerName, items }) => {
-    const displayItems = getInventoryDisplayOrder(items);
+  allInventories.forEach(({ username: ownerName, items: displayItems }) => {
     const totalValue = displayItems.reduce((sum, item) => {
-      const appraised = gameState.getAppraisedValue(ownerName, item.id);
+      const appraised = gameState.getAppraisedValue(ownerName, item.name);
       return sum + (appraised !== null ? appraised : Math.floor(item.price * 0.5));
     }, 0);
 
-    handler.sendToSocket(socket, `│ ${ownerName} (${items.length} items, $${formatPrice(totalValue)} value)`);
+    handler.sendToSocket(socket, `│ ${ownerName} (${displayItems.length} items, $${formatPrice(totalValue)} value)`);
 
     displayItems.forEach(item => {
       const emoji = item.emoji || ' ';
-      const appraised = gameState.getAppraisedValue(ownerName, item.id);
+      const appraised = gameState.getAppraisedValue(ownerName, item.name);
       const value = appraised !== null ? appraised : Math.floor(item.price * 0.5);
       const marker = appraised !== null ? '!' : ' ';
       const shortName = item.name.length > 30 ? item.name.substring(0, 28) + '..' : item.name;
