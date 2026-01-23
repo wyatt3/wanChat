@@ -61,7 +61,7 @@ function store(ctx) {
   };
 
   handler.sendToSocket(socket, '┌────────────────────────────────────────────┐');
-  handler.sendToSocket(socket, '│          WANCHAT STORE (AI-Gen)            │');
+  handler.sendToSocket(socket, '│              WANCHAT STORE                 │');
   handler.sendToSocket(socket, '├────────────────────────────────────────────┤');
   handler.sendToSocket(socket, `│  Your balance: $${formatPrice(balance)}`);
   handler.sendToSocket(socket, '├────────────────────────────────────────────┤');
@@ -595,7 +595,7 @@ async function completeAppraisal(appraisalId, gameState, io, handler) {
   const itemDescription = item ? item.description || '' : '';
   const category = item ? item.category || 'collectible' : 'collectible';
 
-  // Use AI to appraise the item
+  // Appraise the item
   handler.broadcast(`📋 Appraiser is evaluating ${username}'s ${emoji} ${itemName}...`);
 
   let appraisedValue, reason;
@@ -918,7 +918,7 @@ async function refreshstore(ctx) {
     return true;
   }
 
-  handler.sendToSocket(socket, '🏪 Requesting new AI-generated items...');
+  handler.sendToSocket(socket, '🏪 Requesting new items...');
 
   try {
     await storeConfig.forceRefresh((msg) => handler.broadcast(msg));

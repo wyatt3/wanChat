@@ -165,7 +165,7 @@ async function refreshStoreItems(broadcast = null) {
   console.log('Generating new store items via AI...');
 
   if (broadcast) {
-    broadcast('🏪 The store is restocking with new AI-generated items...');
+    broadcast('🏪 The store is restocking with new items...');
   }
 
   try {
@@ -190,7 +190,7 @@ async function refreshStoreItems(broadcast = null) {
       console.log(`Generated ${Object.keys(currentItems).length} new store items`);
 
       if (broadcast) {
-        broadcast(`🏪 New items available! Check /store for ${Object.keys(currentItems).length} fresh AI-generated items!`);
+        broadcast(`🏪 New items available! Check /store for ${Object.keys(currentItems).length} fresh items!`);
       }
     } else {
       throw new Error('AI returned no valid items');
@@ -202,7 +202,7 @@ async function refreshStoreItems(broadcast = null) {
     saveStoreItems();
 
     if (broadcast) {
-      broadcast('🏪 Store restocked with classic items (AI was unavailable)');
+      broadcast('🏪 Store restocked with classic items');
     }
   }
 

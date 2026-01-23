@@ -27,7 +27,7 @@ async function ollamaRequest(prompt, options = {}) {
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(data)
       },
-      timeout: 60000
+      timeout: 300000
     }, (res) => {
       let body = '';
       res.on('data', chunk => body += chunk);
