@@ -16,14 +16,24 @@ async function ollamaRequest(prompt, options = {}, debug = null) {
   };
 
   return new Promise((resolve, reject) => {
+    const requestOptions = {
+      temperature: options.temperature || 0.8
+    };
+
+    // Only set num_predict if a positive limit is specified
+    // Omitting it lets Ollama use its default (usually unlimited or model max)
+    if (options.maxTokens && options.maxTokens > 0) {
+      requestOptions.num_predict = options.maxTokens;
+    } else {
+      // Explicitly set a high limit to ensure full responses
+      requestOptions.num_predict = 2048;
+    }
+
     const data = JSON.stringify({
       model: MODEL,
       prompt: prompt,
       stream: false,
-      options: {
-        temperature: options.temperature || 0.8,
-        num_predict: options.maxTokens || 500
-      }
+      options: requestOptions
     });
 
     let timeoutId = null;
@@ -185,17 +195,42 @@ Output format (ONLY this, no other text):
 
   try {
     log(`Sending request to Ollama at ${OLLAMA_HOST}:${OLLAMA_PORT}...`);
-    const response = await ollamaRequest(prompt, { temperature: 1.1, maxTokens: 300 }, debug);
+    const response = await ollamaRequest(prompt, { temperature: 1.1, maxTokens: -1 }, debug);
     log(`Processed response (${response.length} chars)`);
 
     // Try to extract JSON from response
-    const jsonMatch = response.match(/\{[\s\S]*?"value"[\s\S]*?"reason"[\s\S]*?\}/);
+    let jsonMatch = response.match(/\{[\s\S]*?"value"[\s\S]*?"reason"[\s\S]*?\}/);
     if (jsonMatch) {
-      log(`Matched JSON: ${jsonMatch[0].substring(0, 150)}...`);
-      const result = JSON.parse(jsonMatch[0]);
-      const value = Math.max(1, Math.min(10000000, parseInt(result.value) || originalPrice));
-      const reason = result.reason || 'The appraiser mumbled something incomprehensible.';
-      log(`AI Success! Value: $${value}`);
+      try {
+        log(`Matched JSON: ${jsonMatch[0].substring(0, 150)}...`);
+        const result = JSON.parse(jsonMatch[0]);
+        const value = Math.max(1, Math.min(10000000, parseInt(result.value) || originalPrice));
+        const reason = result.reason || 'The appraiser mumbled something incomprehensible.';
+        log(`AI Success! Value: $${value}`);
+        return { value, reason, usedAI: true };
+      } catch (parseErr) {
+        log(`JSON parse failed, trying to fix truncated response...`);
+      }
+    }
+
+    // Try to handle truncated JSON - extract value and reason separately
+    const valueMatch = response.match(/"value"\s*:\s*(\d+)/);
+    const reasonMatch = response.match(/"reason"\s*:\s*"([^"]*)/); // Note: doesn't require closing quote
+
+    if (valueMatch) {
+      const value = Math.max(1, Math.min(10000000, parseInt(valueMatch[1])));
+      let reason = 'The appraiser mumbled something incomprehensible.';
+
+      if (reasonMatch && reasonMatch[1]) {
+        // Take whatever reason text we got, even if truncated
+        reason = reasonMatch[1];
+        // If it looks truncated (ends without punctuation), add ellipsis
+        if (reason.length > 10 && !reason.match(/[.!?]$/)) {
+          reason = reason + '...';
+        }
+      }
+
+      log(`Extracted from truncated: value=${value}, reason="${reason.substring(0, 50)}..."`);
       return { value, reason, usedAI: true };
     }
 
