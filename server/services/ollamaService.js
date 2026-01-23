@@ -5,6 +5,9 @@ const OLLAMA_HOST = '192.168.0.93';
 const OLLAMA_PORT = 11434;
 const MODEL = 'deepseek-r1:8b';
 
+// Total request timeout (5 minutes)
+const REQUEST_TIMEOUT = 300000;
+
 // Make a request to the Ollama API
 async function ollamaRequest(prompt, options = {}) {
   return new Promise((resolve, reject) => {
@@ -18,6 +21,9 @@ async function ollamaRequest(prompt, options = {}) {
       }
     });
 
+    let timeoutId = null;
+    let completed = false;
+
     const req = http.request({
       hostname: OLLAMA_HOST,
       port: OLLAMA_PORT,
@@ -26,12 +32,14 @@ async function ollamaRequest(prompt, options = {}) {
       headers: {
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(data)
-      },
-      timeout: 300000
+      }
     }, (res) => {
       let body = '';
       res.on('data', chunk => body += chunk);
       res.on('end', () => {
+        if (completed) return;
+        completed = true;
+        clearTimeout(timeoutId);
         try {
           const json = JSON.parse(body);
           // Extract just the response text, removing any <think> tags
@@ -45,10 +53,19 @@ async function ollamaRequest(prompt, options = {}) {
       });
     });
 
-    req.on('error', reject);
-    req.on('timeout', () => {
+    // Set a hard total timeout (5 minutes)
+    timeoutId = setTimeout(() => {
+      if (completed) return;
+      completed = true;
       req.destroy();
-      reject(new Error('Ollama request timed out'));
+      reject(new Error('Ollama request timed out after 5 minutes'));
+    }, REQUEST_TIMEOUT);
+
+    req.on('error', (err) => {
+      if (completed) return;
+      completed = true;
+      clearTimeout(timeoutId);
+      reject(err);
     });
 
     req.write(data);

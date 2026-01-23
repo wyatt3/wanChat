@@ -60,17 +60,17 @@ function store(ctx) {
     ultra: '!!!!!'
   };
 
-  handler.sendToSocket(socket, '┌────────────────────────────────────────────┐');
-  handler.sendToSocket(socket, '│              WANCHAT STORE                 │');
-  handler.sendToSocket(socket, '├────────────────────────────────────────────┤');
+  handler.sendToSocket(socket, '┌──────────────────────────────────────────────────────────────┐');
+  handler.sendToSocket(socket, '│                        WANCHAT STORE                         │');
+  handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
   handler.sendToSocket(socket, `│  Your balance: $${formatPrice(balance)}`);
-  handler.sendToSocket(socket, '├────────────────────────────────────────────┤');
+  handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
 
   items.forEach((item, idx) => {
     const emoji = item.emoji || ' ';
     const stars = raritySymbols[item.rarity] || '';
     const price = `$${formatPrice(item.price)}`;
-    const name = item.name.length > 18 ? item.name.substring(0, 16) + '..' : item.name;
+    const name = item.name.length > 30 ? item.name.substring(0, 28) + '..' : item.name;
 
     // Check if anyone owns this item
     const owner = findItemOwner(gameState, item.id);
@@ -83,13 +83,13 @@ function store(ctx) {
       }
     }
 
-    handler.sendToSocket(socket, `│ ${(idx + 1).toString().padStart(2)}. ${emoji} ${name.padEnd(18)} ${price.padStart(12)} ${stars}${status}`);
+    handler.sendToSocket(socket, `│ ${(idx + 1).toString().padStart(2)}. ${emoji} ${name.padEnd(30)} ${price.padStart(12)} ${stars}${status}`);
   });
 
-  handler.sendToSocket(socket, '├────────────────────────────────────────────┤');
-  handler.sendToSocket(socket, '│  /buy [#]  /sell [#]  /inventory');
+  handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
+  handler.sendToSocket(socket, '│  /buy [#]  /sell [#]  /inventory  /refreshstore');
   handler.sendToSocket(socket, `│  Refreshes in ${refreshTime}`);
-  handler.sendToSocket(socket, '└────────────────────────────────────────────┘');
+  handler.sendToSocket(socket, '└──────────────────────────────────────────────────────────────┘');
 
   return true;
 }
@@ -172,23 +172,23 @@ function inventory(ctx) {
   const isOwn = targetUser.toLowerCase() === username.toLowerCase();
 
   if (items.length === 0) {
-    handler.sendToSocket(socket, '┌────────────────────────────────────────────┐');
-    handler.sendToSocket(socket, '│             INVENTORY EMPTY                │');
-    handler.sendToSocket(socket, '├────────────────────────────────────────────┤');
+    handler.sendToSocket(socket, '┌──────────────────────────────────────────────────────────────┐');
+    handler.sendToSocket(socket, '│                       INVENTORY EMPTY                        │');
+    handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
     handler.sendToSocket(socket, '│  Use /store to shop!');
-    handler.sendToSocket(socket, '└────────────────────────────────────────────┘');
+    handler.sendToSocket(socket, '└──────────────────────────────────────────────────────────────┘');
     return true;
   }
 
   const title = isOwn ? 'YOUR INVENTORY' : `${targetUser.toUpperCase()}'S INVENTORY`;
-  const boxWidth = 42;
+  const boxWidth = 62;
   const titlePadded = title.length > boxWidth ? title.substring(0, boxWidth) : title;
   const leftPad = Math.floor((boxWidth - titlePadded.length) / 2);
   const rightPad = boxWidth - titlePadded.length - leftPad;
 
-  handler.sendToSocket(socket, '┌────────────────────────────────────────────┐');
+  handler.sendToSocket(socket, '┌──────────────────────────────────────────────────────────────┐');
   handler.sendToSocket(socket, `│${' '.repeat(leftPad)}${titlePadded}${' '.repeat(rightPad)}│`);
-  handler.sendToSocket(socket, '├────────────────────────────────────────────┤');
+  handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
 
   const displayItems = getInventoryDisplayOrder(items);
   const equippedTitleId = isOwn ? gameState.getEquippedTitle(username) : null;
@@ -222,11 +222,11 @@ function inventory(ctx) {
     const appraisedMarker = appraisedValue !== null ? '!' : ' ';
     if (appraisedValue !== null) hasAppraised = true;
     const equipped = (item.id === equippedTitleId) ? '*' : ' ';
-    const name = item.name.length > 18 ? item.name.substring(0, 16) + '..' : item.name;
-    handler.sendToSocket(socket, `│${appraisedMarker}${equipped}${(idx + 1).toString().padStart(2)}. ${emoji} ${name.padEnd(18)} ($${formatPrice(sellValue)})`);
+    const name = item.name.length > 30 ? item.name.substring(0, 28) + '..' : item.name;
+    handler.sendToSocket(socket, `│${appraisedMarker}${equipped}${(idx + 1).toString().padStart(2)}. ${emoji} ${name.padEnd(30)} ($${formatPrice(sellValue)})`);
   });
 
-  handler.sendToSocket(socket, '├────────────────────────────────────────────┤');
+  handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
   if (isOwn) {
     if (hasTitles) {
       handler.sendToSocket(socket, '│  /equip [#] to equip a title');
@@ -239,7 +239,7 @@ function inventory(ctx) {
     handler.sendToSocket(socket, '│  /inventory [user] to view inventories');
   }
   handler.sendToSocket(socket, '│  * = equipped, ! = appraised');
-  handler.sendToSocket(socket, '└────────────────────────────────────────────┘');
+  handler.sendToSocket(socket, '└──────────────────────────────────────────────────────────────┘');
 
   return true;
 }
@@ -661,9 +661,9 @@ function appraise(ctx) {
       return true;
     }
 
-    handler.sendToSocket(socket, '┌─────────────────────────────────────────┐');
-    handler.sendToSocket(socket, '│         PENDING APPRAISALS              │');
-    handler.sendToSocket(socket, '├─────────────────────────────────────────┤');
+    handler.sendToSocket(socket, '┌──────────────────────────────────────────────────────────────┐');
+    handler.sendToSocket(socket, '│                     PENDING APPRAISALS                       │');
+    handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
 
     pending.forEach(p => {
       const item = storeConfig.getItem(p.itemId);
@@ -673,10 +673,11 @@ function appraise(ctx) {
       const remaining = Math.max(0, p.returnTime - now);
       const mins = Math.floor(remaining / 60000);
       const secs = Math.floor((remaining % 60000) / 1000);
-      handler.sendToSocket(socket, `│ ${emoji} ${itemName.padEnd(20)} ${mins}m ${secs}s remaining`);
+      const displayName = itemName.length > 30 ? itemName.substring(0, 28) + '..' : itemName;
+      handler.sendToSocket(socket, `│ ${emoji} ${displayName.padEnd(30)} ${mins}m ${secs}s remaining`);
     });
 
-    handler.sendToSocket(socket, '└─────────────────────────────────────────┘');
+    handler.sendToSocket(socket, '└──────────────────────────────────────────────────────────────┘');
     return true;
   }
 
@@ -738,7 +739,7 @@ function appraise(ctx) {
   gameState.clearAppraisedValue(username, item.id);
 
   // Set random return time (1-60 minutes)
-  const waitMinutes = 1 + Math.floor(Math.random() * 60);
+  const waitMinutes = 1 + Math.floor(Math.random() * 30);
   const returnTime = Date.now() + waitMinutes * 60 * 1000;
 
   // Create unique appraisal ID
@@ -868,15 +869,15 @@ function inventories(ctx) {
   }
 
   if (allInventories.length === 0) {
-    handler.sendToSocket(socket, '┌────────────────────────────────────────────┐');
-    handler.sendToSocket(socket, '│           NO ONE OWNS ANYTHING             │');
-    handler.sendToSocket(socket, '└────────────────────────────────────────────┘');
+    handler.sendToSocket(socket, '┌──────────────────────────────────────────────────────────────┐');
+    handler.sendToSocket(socket, '│                    NO ONE OWNS ANYTHING                      │');
+    handler.sendToSocket(socket, '└──────────────────────────────────────────────────────────────┘');
     return true;
   }
 
-  handler.sendToSocket(socket, '┌────────────────────────────────────────────┐');
-  handler.sendToSocket(socket, '│            ALL INVENTORIES                 │');
-  handler.sendToSocket(socket, '├────────────────────────────────────────────┤');
+  handler.sendToSocket(socket, '┌──────────────────────────────────────────────────────────────┐');
+  handler.sendToSocket(socket, '│                       ALL INVENTORIES                        │');
+  handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
 
   allInventories.forEach(({ username: ownerName, items }) => {
     const displayItems = getInventoryDisplayOrder(items);
@@ -892,8 +893,8 @@ function inventories(ctx) {
       const appraised = gameState.getAppraisedValue(ownerName, item.id);
       const value = appraised !== null ? appraised : Math.floor(item.price * 0.5);
       const marker = appraised !== null ? '!' : ' ';
-      const shortName = item.name.length > 16 ? item.name.substring(0, 14) + '..' : item.name;
-      handler.sendToSocket(socket, `│  ${marker}${emoji} ${shortName.padEnd(16)} $${formatPrice(value)}`);
+      const shortName = item.name.length > 30 ? item.name.substring(0, 28) + '..' : item.name;
+      handler.sendToSocket(socket, `│  ${marker}${emoji} ${shortName.padEnd(30)} $${formatPrice(value)}`);
     });
 
     handler.sendToSocket(socket, '│');
@@ -905,7 +906,7 @@ function inventories(ctx) {
     handler.sendToSocket(socket, `│ (${pendingCount} item${pendingCount > 1 ? 's' : ''} at appraiser)`);
   }
 
-  handler.sendToSocket(socket, '└────────────────────────────────────────────┘');
+  handler.sendToSocket(socket, '└──────────────────────────────────────────────────────────────┘');
 
   return true;
 }
