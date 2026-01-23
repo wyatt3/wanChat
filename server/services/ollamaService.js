@@ -124,6 +124,8 @@ Be creative and funny! Mix absurd, mundane, and epic items. Output ONLY the JSON
 
 // Appraise an item using AI
 async function appraiseItem(itemName, itemDescription, itemEmoji, originalPrice, category) {
+  console.log(`[APPRAISAL] Starting AI appraisal for: ${itemName}`);
+
   const prompt = `You are a dramatic, eccentric antiques appraiser with a flair for absurd explanations. A customer brought in:
 
 Item: ${itemEmoji || ''} ${itemName}
@@ -153,21 +155,27 @@ BAD examples (too generic, could apply to anything):
 - "Market conditions have changed."`;
 
   try {
+    console.log(`[APPRAISAL] Sending request to Ollama...`);
     const response = await ollamaRequest(prompt, { temperature: 1.1, maxTokens: 300 });
+    console.log(`[APPRAISAL] Raw AI response: ${response.substring(0, 500)}`);
 
     // Try to extract JSON from response
     const jsonMatch = response.match(/\{[\s\S]*?"value"[\s\S]*?"reason"[\s\S]*?\}/);
     if (jsonMatch) {
+      console.log(`[APPRAISAL] Matched JSON: ${jsonMatch[0]}`);
       const result = JSON.parse(jsonMatch[0]);
       const value = Math.max(1, Math.min(10000000, parseInt(result.value) || originalPrice));
       const reason = result.reason || 'The appraiser mumbled something incomprehensible.';
+      console.log(`[APPRAISAL] Success! Value: $${value}, Reason: ${reason}`);
       return { value, reason };
     }
 
     // Fallback: generate random value if AI response was malformed
+    console.log(`[APPRAISAL] No JSON match found in response, using fallback`);
     throw new Error('Could not parse appraisal response');
   } catch (error) {
-    console.error('AI appraisal failed:', error.message);
+    console.error(`[APPRAISAL] AI appraisal failed: ${error.message}`);
+    console.error(`[APPRAISAL] Using fallback appraisal for ${itemName}`);
     // Fallback to random appraisal
     return generateFallbackAppraisal(originalPrice, itemName);
   }
