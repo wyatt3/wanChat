@@ -42,10 +42,24 @@ async function ollamaRequest(prompt, options = {}) {
         clearTimeout(timeoutId);
         try {
           const json = JSON.parse(body);
-          // Extract just the response text, removing any <think> tags
-          let response = json.response || '';
-          // Remove thinking tags that deepseek-r1 uses
-          response = response.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+          let fullResponse = json.response || '';
+
+          // Try to extract content outside of think tags first
+          let response = fullResponse.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+
+          // If response is empty after removing think tags, try to find JSON inside the think tags
+          if (!response || response.length === 0) {
+            // Look for JSON inside the think tags
+            const thinkMatch = fullResponse.match(/<think>([\s\S]*?)<\/think>/);
+            if (thinkMatch) {
+              // Try to find JSON object in the thinking
+              const jsonInThink = thinkMatch[1].match(/\{[\s\S]*?"value"[\s\S]*?"reason"[\s\S]*?\}/);
+              if (jsonInThink) {
+                response = jsonInThink[0];
+              }
+            }
+          }
+
           resolve(response);
         } catch (e) {
           reject(new Error('Failed to parse Ollama response: ' + e.message));
