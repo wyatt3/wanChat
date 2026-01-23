@@ -188,7 +188,7 @@ Item: ${itemEmoji || ''} ${itemName}
 Description: ${itemDescription || 'No description'}
 Original price: $${originalPrice}
 
-Pick a random value between $1 and $10,000,000. Write a funny one-sentence reason specific to "${itemName}".
+Appraise realistically based on original price. Most items (70%) should be worth 20%-150% of original price. Some items (25%) lose significant value (worth only 1%-20% of original). Rarely (5%) an item is worth 2x-10x the original. Extreme jackpots over 10x are exceptionally rare (1%). Write a funny one-sentence reason specific to "${itemName}".
 
 Output format (ONLY this, no other text):
 {"value": NUMBER, "reason": "funny sentence about ${itemName}"}`;

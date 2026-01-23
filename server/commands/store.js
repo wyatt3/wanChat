@@ -628,24 +628,16 @@ async function completeAppraisal(appraisalId, gameState, io, handler) {
 
   // Appraise the item
   handler.broadcast(`📋 Appraiser is evaluating ${username}'s ${emoji} ${displayName}...`);
-  handler.broadcast(`[DEBUG] Calling AI for appraisal...`);
 
   let appraisedValue, reason;
-  let usedAI = false;
   try {
-    const result = await ollamaService.appraiseItem(displayName, itemDescription, emoji, price, category, (msg) => handler.broadcast(`[DEBUG] ${msg}`));
+    const result = await ollamaService.appraiseItem(displayName, itemDescription, emoji, price, category);
     appraisedValue = result.value;
     reason = result.reason;
-    usedAI = result.usedAI !== false; // Will be false if fallback was used
   } catch (error) {
-    handler.broadcast(`[DEBUG] AI call threw error: ${error.message}`);
     // Fallback to random
     appraisedValue = generateAppraisedValue(price);
     reason = generateAppraisalReason(price, appraisedValue, displayName);
-  }
-
-  if (!usedAI) {
-    handler.broadcast(`[DEBUG] Used fallback appraisal (AI failed)`);
   }
 
   // Return FULL ITEM OBJECT to inventory
