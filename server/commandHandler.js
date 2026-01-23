@@ -132,6 +132,10 @@ class CommandHandler {
         return storeCommands.inventories(ctx);
       case '/refreshstore':
         return storeCommands.refreshstore(ctx);
+      case '/cleanitemdatabase':
+        return storeCommands.cleanitemdatabase(ctx);
+      case '/nukeallinventories':
+        return storeCommands.nukeallinventories(ctx);
 
       // Fun commands
       case '/fart':

@@ -30,12 +30,14 @@ function getInventoryDisplayOrder(inventory) {
 // Find who owns an item by NAME (returns username or null)
 // Also checks pending appraisals - items being appraised are still "owned"
 function findItemOwner(gameState, itemName) {
+  if (!itemName) return null;
   const nameLower = itemName.toLowerCase();
 
   // Check inventories (now stores full objects)
   for (const [ownerName, items] of gameState.inventories.entries()) {
+    if (!Array.isArray(items)) continue;
     for (const item of items) {
-      if (typeof item === 'object' && item.name && item.name.toLowerCase() === nameLower) {
+      if (typeof item === 'object' && item?.name?.toLowerCase() === nameLower) {
         return ownerName;
       }
       // Backwards compat: if item is a string (old format ID), skip
@@ -44,7 +46,9 @@ function findItemOwner(gameState, itemName) {
 
   // Check pending appraisals - items being appraised are still owned
   for (const [appraisalId, pending] of gameState.pendingAppraisals.entries()) {
-    if (pending.itemName && pending.itemName.toLowerCase() === nameLower) {
+    // Support both old (itemId) and new (itemName, item.name) formats
+    const pendingName = pending?.itemName || pending?.item?.name || pending?.itemId;
+    if (pendingName && pendingName.toLowerCase() === nameLower) {
       return pending.username;
     }
   }
@@ -604,26 +608,37 @@ async function completeAppraisal(appraisalId, gameState, io, handler) {
   if (!pending) return;
 
   // Pending now stores full item object
-  const { username, item: storedItem, originalPrice, itemName } = pending;
+  const { username, item: storedItem, originalPrice, itemName, itemId } = pending;
 
-  const emoji = storedItem ? storedItem.emoji || '' : '';
-  const displayName = storedItem ? storedItem.name : itemName;
-  const itemDescription = storedItem ? storedItem.description || '' : '';
-  const category = storedItem ? storedItem.category || 'collectible' : 'collectible';
+  // Handle old format gracefully
+  const displayName = storedItem?.name || itemName || itemId || 'Unknown Item';
+  const emoji = storedItem?.emoji || '';
+  const itemDescription = storedItem?.description || '';
+  const category = storedItem?.category || 'collectible';
+  const price = originalPrice || storedItem?.price || 100;
+
+  // If we don't have a valid item object, we can't return it to inventory properly
+  // In this case, just skip and remove the pending appraisal
+  if (!storedItem || !storedItem.name) {
+    console.error(`Appraisal ${appraisalId} has invalid item data, removing...`);
+    gameState.removePendingAppraisal(appraisalId);
+    handler.broadcast(`⚠️ ${username}'s item appraisal failed due to corrupted data. Use /cleanitemdatabase to fix.`);
+    return;
+  }
 
   // Appraise the item
   handler.broadcast(`📋 Appraiser is evaluating ${username}'s ${emoji} ${displayName}...`);
 
   let appraisedValue, reason;
   try {
-    const result = await ollamaService.appraiseItem(displayName, itemDescription, emoji, originalPrice, category);
+    const result = await ollamaService.appraiseItem(displayName, itemDescription, emoji, price, category);
     appraisedValue = result.value;
     reason = result.reason;
   } catch (error) {
     console.error('AI appraisal failed:', error.message);
     // Fallback to random
-    appraisedValue = generateAppraisedValue(originalPrice);
-    reason = generateAppraisalReason(originalPrice, appraisedValue, displayName);
+    appraisedValue = generateAppraisedValue(price);
+    reason = generateAppraisalReason(price, appraisedValue, displayName);
   }
 
   // Return FULL ITEM OBJECT to inventory
@@ -636,19 +651,19 @@ async function completeAppraisal(appraisalId, gameState, io, handler) {
   gameState.removePendingAppraisal(appraisalId);
 
   // Broadcast the result
-  const percentChange = ((appraisedValue - originalPrice) / originalPrice * 100).toFixed(0);
-  const changeText = appraisedValue >= originalPrice
+  const percentChange = ((appraisedValue - price) / price * 100).toFixed(0);
+  const changeText = appraisedValue >= price
     ? `+${percentChange}%`
     : `${percentChange}%`;
 
   let announcement;
-  if (appraisedValue >= originalPrice * 10) {
+  if (appraisedValue >= price * 10) {
     announcement = `🎉 JACKPOT! ${username}'s ${emoji} ${displayName} appraised at $${formatPrice(appraisedValue)}! (${changeText})`;
-  } else if (appraisedValue >= originalPrice * 2) {
+  } else if (appraisedValue >= price * 2) {
     announcement = `✨ ${username}'s ${emoji} ${displayName} appraised at $${formatPrice(appraisedValue)}! (${changeText})`;
-  } else if (appraisedValue >= originalPrice) {
+  } else if (appraisedValue >= price) {
     announcement = `${username}'s ${emoji} ${displayName} appraised at $${formatPrice(appraisedValue)} (${changeText})`;
-  } else if (appraisedValue >= originalPrice * 0.5) {
+  } else if (appraisedValue >= price * 0.5) {
     announcement = `${username}'s ${emoji} ${displayName} appraised at $${formatPrice(appraisedValue)} (${changeText})`;
   } else {
     announcement = `💔 ${username}'s ${emoji} ${displayName} appraised at only $${formatPrice(appraisedValue)}... (${changeText})`;
@@ -684,8 +699,9 @@ function appraise(ctx) {
     pending.forEach(p => {
       // Pending now stores full item object
       const storedItem = p.item;
-      const itemName = storedItem ? storedItem.name : p.itemName;
-      const emoji = storedItem ? storedItem.emoji || '' : '';
+      // Handle old format (itemId) and new format (itemName/item.name)
+      const itemName = storedItem?.name || p.itemName || p.itemId || 'Unknown Item';
+      const emoji = storedItem?.emoji || '';
       const now = Date.now();
       const remaining = Math.max(0, p.returnTime - now);
       const mins = Math.floor(remaining / 60000);
@@ -946,6 +962,117 @@ async function refreshstore(ctx) {
   return true;
 }
 
+function cleanitemdatabase(ctx) {
+  const { handler, socket, gameState } = ctx;
+
+  handler.sendToSocket(socket, '┌──────────────────────────────────────────────────────────────┐');
+  handler.sendToSocket(socket, '│                  CLEANING ITEM DATABASE                      │');
+  handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
+
+  let cleanedInventories = 0;
+  let removedItems = 0;
+  let clearedAppraisals = 0;
+  let clearedPending = 0;
+  let clearedEquipped = 0;
+
+  // 1. Clean inventories - remove invalid items (strings, objects without name)
+  for (const [username, items] of gameState.inventories.entries()) {
+    const originalCount = items.length;
+    const validItems = items.filter(item => {
+      // Keep only valid item objects with required fields
+      return item && typeof item === 'object' && item.name && item.price !== undefined;
+    });
+
+    if (validItems.length !== originalCount) {
+      removedItems += (originalCount - validItems.length);
+      cleanedInventories++;
+      gameState.inventories.set(username, validItems);
+    }
+  }
+  gameState.saveInventories();
+  handler.sendToSocket(socket, `│ Cleaned ${cleanedInventories} inventories, removed ${removedItems} invalid items`);
+
+  // 2. Clear all appraisals (they reference items that may no longer exist)
+  for (const [username, appraisals] of gameState.appraisals.entries()) {
+    clearedAppraisals += appraisals.size;
+    appraisals.clear();
+  }
+  gameState.appraisals.clear();
+  gameState.saveAppraisals();
+  handler.sendToSocket(socket, `│ Cleared ${clearedAppraisals} appraisal records`);
+
+  // 3. Clear all pending appraisals and their timers
+  clearedPending = gameState.pendingAppraisals.size;
+
+  // Clear all appraisal timers
+  for (const [appraisalId, timer] of appraisalTimers.entries()) {
+    clearTimeout(timer);
+  }
+  appraisalTimers.clear();
+
+  gameState.pendingAppraisals.clear();
+  gameState.savePendingAppraisals();
+  handler.sendToSocket(socket, `│ Cleared ${clearedPending} pending appraisals`);
+
+  // 4. Clear equipped titles (they may reference items that no longer exist)
+  clearedEquipped = gameState.equippedTitles.size;
+  gameState.equippedTitles.clear();
+  gameState.saveEquipped();
+  handler.sendToSocket(socket, `│ Cleared ${clearedEquipped} equipped titles`);
+
+  handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
+  handler.sendToSocket(socket, '│ Database cleaned! Items in inventories preserved.');
+  handler.sendToSocket(socket, '│ Appraisals and pending items reset.');
+  handler.sendToSocket(socket, '│ Re-equip titles with /equip if needed.');
+  handler.sendToSocket(socket, '└──────────────────────────────────────────────────────────────┘');
+
+  return true;
+}
+
+function nukeallinventories(ctx) {
+  const { handler, socket, gameState } = ctx;
+
+  handler.sendToSocket(socket, '┌──────────────────────────────────────────────────────────────┐');
+  handler.sendToSocket(socket, '│           ⚠️  NUKING ALL INVENTORY DATA ⚠️                   │');
+  handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
+
+  // Clear everything
+  const inventoryCount = gameState.inventories.size;
+  const appraisalCount = gameState.appraisals.size;
+  const pendingCount = gameState.pendingAppraisals.size;
+  const equippedCount = gameState.equippedTitles.size;
+
+  // Clear appraisal timers first
+  for (const [appraisalId, timer] of appraisalTimers.entries()) {
+    clearTimeout(timer);
+  }
+  appraisalTimers.clear();
+
+  // Clear all data
+  gameState.inventories.clear();
+  gameState.appraisals.clear();
+  gameState.pendingAppraisals.clear();
+  gameState.equippedTitles.clear();
+
+  // Save to persist the clearing
+  gameState.saveInventories();
+  gameState.saveAppraisals();
+  gameState.savePendingAppraisals();
+  gameState.saveEquipped();
+
+  handler.sendToSocket(socket, `│ Cleared ${inventoryCount} inventories`);
+  handler.sendToSocket(socket, `│ Cleared ${appraisalCount} appraisal users`);
+  handler.sendToSocket(socket, `│ Cleared ${pendingCount} pending appraisals`);
+  handler.sendToSocket(socket, `│ Cleared ${equippedCount} equipped titles`);
+  handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
+  handler.sendToSocket(socket, '│ All inventory data has been wiped!');
+  handler.sendToSocket(socket, '└──────────────────────────────────────────────────────────────┘');
+
+  handler.broadcast('⚠️ All inventory data has been reset by admin.');
+
+  return true;
+}
+
 module.exports = {
   store,
   buy,
@@ -957,5 +1084,7 @@ module.exports = {
   giveitem,
   appraise,
   refreshstore,
-  restoreAppraisalTimers
+  restoreAppraisalTimers,
+  cleanitemdatabase,
+  nukeallinventories
 };

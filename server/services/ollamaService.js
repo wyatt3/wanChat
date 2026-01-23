@@ -124,26 +124,36 @@ Be creative and funny! Mix absurd, mundane, and epic items. Output ONLY the JSON
 
 // Appraise an item using AI
 async function appraiseItem(itemName, itemDescription, itemEmoji, originalPrice, category) {
-  const prompt = `You are an eccentric antiques appraiser. A customer brought in this item:
+  const prompt = `You are a dramatic, eccentric antiques appraiser with a flair for absurd explanations. A customer brought in:
 
 Item: ${itemEmoji || ''} ${itemName}
 Description: ${itemDescription || 'No description'}
 Category: ${category}
-Original purchase price: $${originalPrice}
+Original price: $${originalPrice}
 
-Appraise this item. The value can be WILDLY different from the original price - anywhere from $1 to $10,000,000. Be dramatic! Sometimes worthless junk turns out to be priceless, sometimes expensive items are revealed as fakes.
+IMPORTANT: Your reason MUST directly reference the specific item ("${itemName}") and its characteristics. Be funny and creative! The reason should only make sense for THIS exact item.
 
-Respond with EXACTLY this JSON format (nothing else):
-{"value": NUMBER, "reason": "Your dramatic one-sentence explanation for the value"}
+The value can range from $1 to $10,000,000. Be unpredictable!
 
-Examples of good reasons:
-- "The coffee stain on this actually forms a perfect map to buried treasure!"
-- "Unfortunately this was mass-produced in China last Tuesday."
-- "My god... this is THE banana from the famous art exhibit!"
-- "Upon close inspection, this is clearly haunted by a vengeful spirit."`;
+Respond with ONLY this JSON (no other text):
+{"value": NUMBER, "reason": "One dramatic sentence about THIS SPECIFIC item"}
+
+GOOD examples (notice how each reason is specific to that item):
+- Stuffed Panda: "Pandas are no longer endangered so demand has plummeted!"
+- Ancient Coin: "This coin was used to pay Julius Caesar's barber - priceless!"
+- Gaming Mouse: "Turns out this mouse was used to win a $2 million esports tournament!"
+- Pet Rock: "DNA testing confirms this rock witnessed the dinosaur extinction."
+- Banana: "This is THE banana from the $120,000 art exhibit... someone ate the original."
+- Crown Title: "The previous owner was dethroned in a coup - now it's bad luck."
+- Void Fragment: "The void stared back and liked what it saw - collectors are terrified."
+
+BAD examples (too generic, could apply to anything):
+- "This is quite valuable!"
+- "Unfortunately it's a fake."
+- "Market conditions have changed."`;
 
   try {
-    const response = await ollamaRequest(prompt, { temperature: 1.0, maxTokens: 200 });
+    const response = await ollamaRequest(prompt, { temperature: 1.1, maxTokens: 300 });
 
     // Try to extract JSON from response
     const jsonMatch = response.match(/\{[\s\S]*?"value"[\s\S]*?"reason"[\s\S]*?\}/);
