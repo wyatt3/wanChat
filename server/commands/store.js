@@ -75,17 +75,17 @@ function store(ctx) {
     ultra: '!!!!!'
   };
 
-  handler.sendToSocket(socket, '┌──────────────────────────────────────────────────────────────┐');
-  handler.sendToSocket(socket, '│                        WANCHAT STORE                         │');
-  handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
-  handler.sendToSocket(socket, `│  Your balance: $${formatPrice(balance)}`);
-  handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
+  handler.sendToSocket(socket, '┌────────────────────────────────────────────────────────────────────────────────────┐');
+  handler.sendToSocket(socket, '│                                   WANCHAT STORE                                    │');
+  handler.sendToSocket(socket, '├────────────────────────────────────────────────────────────────────────────────────┤');
+  handler.sendToSocket(socket, `│  Your balance: $${formatPrice(balance)}    |    Refreshes in ${refreshTime}`);
+  handler.sendToSocket(socket, '├────────────────────────────────────────────────────────────────────────────────────┤');
 
   items.forEach((item, idx) => {
     const emoji = item.emoji || ' ';
     const stars = raritySymbols[item.rarity] || '';
     const price = `$${formatPrice(item.price)}`;
-    const name = item.name.length > 30 ? item.name.substring(0, 28) + '..' : item.name;
+    const name = item.name.length > 40 ? item.name.substring(0, 38) + '..' : item.name;
 
     // Check if anyone owns this item BY NAME
     const owner = findItemOwner(gameState, item.name);
@@ -98,13 +98,18 @@ function store(ctx) {
       }
     }
 
-    handler.sendToSocket(socket, `│ ${(idx + 1).toString().padStart(2)}. ${emoji} ${name.padEnd(30)} ${price.padStart(12)} ${stars}${status}`);
+    handler.sendToSocket(socket, `│ ${(idx + 1).toString().padStart(2)}. ${emoji} ${name.padEnd(40)} ${price.padStart(14)} ${stars}${status}`);
+
+    // Show description on next line if available
+    if (item.description) {
+      const desc = item.description.length > 75 ? item.description.substring(0, 73) + '..' : item.description;
+      handler.sendToSocket(socket, `│       ${desc}`);
+    }
   });
 
-  handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
-  handler.sendToSocket(socket, '│  /buy [#]  /sell [#]  /inventory  /refreshstore');
-  handler.sendToSocket(socket, `│  Refreshes in ${refreshTime}`);
-  handler.sendToSocket(socket, '└──────────────────────────────────────────────────────────────┘');
+  handler.sendToSocket(socket, '├────────────────────────────────────────────────────────────────────────────────────┤');
+  handler.sendToSocket(socket, '│  /buy [#]  /sell [#]  /inventory  /appraise [#]  /refreshstore');
+  handler.sendToSocket(socket, '└────────────────────────────────────────────────────────────────────────────────────┘');
 
   return true;
 }
@@ -187,23 +192,19 @@ function inventory(ctx) {
   const isOwn = targetUser.toLowerCase() === username.toLowerCase();
 
   if (items.length === 0) {
-    handler.sendToSocket(socket, '┌──────────────────────────────────────────────────────────────┐');
-    handler.sendToSocket(socket, '│                       INVENTORY EMPTY                        │');
-    handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
+    handler.sendToSocket(socket, '┌────────────────────────────────────────────────────────────────────────────────────┐');
+    handler.sendToSocket(socket, '│                                   INVENTORY EMPTY                                  │');
+    handler.sendToSocket(socket, '├────────────────────────────────────────────────────────────────────────────────────┤');
     handler.sendToSocket(socket, '│  Use /store to shop!');
-    handler.sendToSocket(socket, '└──────────────────────────────────────────────────────────────┘');
+    handler.sendToSocket(socket, '└────────────────────────────────────────────────────────────────────────────────────┘');
     return true;
   }
 
   const title = isOwn ? 'YOUR INVENTORY' : `${targetUser.toUpperCase()}'S INVENTORY`;
-  const boxWidth = 62;
-  const titlePadded = title.length > boxWidth ? title.substring(0, boxWidth) : title;
-  const leftPad = Math.floor((boxWidth - titlePadded.length) / 2);
-  const rightPad = boxWidth - titlePadded.length - leftPad;
 
-  handler.sendToSocket(socket, '┌──────────────────────────────────────────────────────────────┐');
-  handler.sendToSocket(socket, `│${' '.repeat(leftPad)}${titlePadded}${' '.repeat(rightPad)}│`);
-  handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
+  handler.sendToSocket(socket, '┌────────────────────────────────────────────────────────────────────────────────────┐');
+  handler.sendToSocket(socket, `│                                   ${title.padEnd(30)}`);
+  handler.sendToSocket(socket, '├────────────────────────────────────────────────────────────────────────────────────┤');
 
   const displayItems = getInventoryDisplayOrder(items);
   const equippedTitleName = isOwn ? gameState.getEquippedTitle(username) : null;
@@ -238,24 +239,27 @@ function inventory(ctx) {
     if (appraisedValue !== null) hasAppraised = true;
     // Check equipped by name (case insensitive)
     const equipped = (equippedTitleName && item.name.toLowerCase() === equippedTitleName.toLowerCase()) ? '*' : ' ';
-    const name = item.name.length > 30 ? item.name.substring(0, 28) + '..' : item.name;
-    handler.sendToSocket(socket, `│${appraisedMarker}${equipped}${(idx + 1).toString().padStart(2)}. ${emoji} ${name.padEnd(30)} ($${formatPrice(sellValue)})`);
+    const name = item.name.length > 40 ? item.name.substring(0, 38) + '..' : item.name;
+    handler.sendToSocket(socket, `│${appraisedMarker}${equipped}${(idx + 1).toString().padStart(2)}. ${emoji} ${name.padEnd(40)} $${formatPrice(sellValue).padStart(12)}`);
+
+    // Show description if available
+    if (item.description) {
+      const desc = item.description.length > 75 ? item.description.substring(0, 73) + '..' : item.description;
+      handler.sendToSocket(socket, `│       ${desc}`);
+    }
   });
 
-  handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
+  handler.sendToSocket(socket, '├────────────────────────────────────────────────────────────────────────────────────┤');
   if (isOwn) {
     if (hasTitles) {
-      handler.sendToSocket(socket, '│  /equip [#] to equip a title');
-      handler.sendToSocket(socket, '│  /unequip to remove title');
+      handler.sendToSocket(socket, '│  /equip [#]  /unequip - Manage equipped title');
     }
-    handler.sendToSocket(socket, '│  /sell [#] to sell at shown price');
-    handler.sendToSocket(socket, '│  /appraise [#] to get new value (costs 25%)');
-    handler.sendToSocket(socket, '│  /giveitem [user] [#] to gift an item');
+    handler.sendToSocket(socket, '│  /sell [#]  /appraise [#]  /giveitem [user] [#]');
   } else {
-    handler.sendToSocket(socket, '│  /inventory [user] to view inventories');
+    handler.sendToSocket(socket, '│  /inventory [user] - View inventories');
   }
   handler.sendToSocket(socket, '│  * = equipped, ! = appraised');
-  handler.sendToSocket(socket, '└──────────────────────────────────────────────────────────────┘');
+  handler.sendToSocket(socket, '└────────────────────────────────────────────────────────────────────────────────────┘');
 
   return true;
 }

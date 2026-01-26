@@ -66,40 +66,44 @@ function dealership(ctx) {
   const timeUntil = dealershipConfig.getTimeUntilRefresh();
   const balance = gameState.getBalance(username);
 
-  handler.sendToSocket(socket, '┌──────────────────────────────────────────────────────────────┐');
-  handler.sendToSocket(socket, '│                    🚗 DEALERSHIP 🚗                          │');
-  handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
-  handler.sendToSocket(socket, `│ Your balance: $${formatPrice(balance)}`);
-  handler.sendToSocket(socket, `│ New inventory in: ${timeUntil.minutes}m ${timeUntil.seconds}s`);
-  handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
+  handler.sendToSocket(socket, '┌────────────────────────────────────────────────────────────────────────────────────┐');
+  handler.sendToSocket(socket, '│                                   🚗 DEALERSHIP 🚗                                 │');
+  handler.sendToSocket(socket, '├────────────────────────────────────────────────────────────────────────────────────┤');
+  handler.sendToSocket(socket, `│ Your balance: $${formatPrice(balance)}    |    New inventory in: ${timeUntil.minutes}m ${timeUntil.seconds}s`);
+  handler.sendToSocket(socket, '├────────────────────────────────────────────────────────────────────────────────────┤');
 
   if (sortedCars.length === 0) {
     handler.sendToSocket(socket, '│ No cars available! Check back later.');
   } else {
-    for (const car of sortedCars) {
+    sortedCars.forEach((car, idx) => {
+      const num = (idx + 1).toString().padStart(2);
       const emoji = car.emoji || '🚗';
       const rarity = getRarityDisplay(car.rarity);
-      const name = car.name.length > 28 ? car.name.substring(0, 26) + '..' : car.name;
-      const price = `$${formatPrice(car.price)}`.padStart(12);
-      const hp = car.horsepower ? `${car.horsepower}hp` : '';
-      const speed = car.topSpeed || '';
+      const name = car.name.length > 35 ? car.name.substring(0, 33) + '..' : car.name;
+      const price = `$${formatPrice(car.price)}`.padStart(14);
 
-      handler.sendToSocket(socket, `│ ${rarity} ${emoji} ${name.padEnd(28)} ${price}`);
+      // Check ownership
+      const owner = findCarOwner(gameState, car.name);
+      let status = '';
+      if (owner) {
+        if (owner.toLowerCase() === username.toLowerCase()) {
+          status = ' [OWNED]';
+        } else {
+          status = ` [${owner}]`;
+        }
+      }
+
+      handler.sendToSocket(socket, `│ ${num}. ${rarity} ${emoji} ${name.padEnd(35)} ${price}${status}`);
       if (car.description) {
-        const desc = car.description.length > 55 ? car.description.substring(0, 53) + '..' : car.description;
-        handler.sendToSocket(socket, `│     ${desc}`);
+        const desc = car.description.length > 75 ? car.description.substring(0, 73) + '..' : car.description;
+        handler.sendToSocket(socket, `│       ${desc}`);
       }
-      if (hp || speed) {
-        handler.sendToSocket(socket, `│     ${hp}${hp && speed ? ' | ' : ''}${speed}`);
-      }
-    }
+    });
   }
 
-  handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
-  handler.sendToSocket(socket, '│ /buycar [name] - Purchase a car');
-  handler.sendToSocket(socket, '│ /garage - View your cars');
-  handler.sendToSocket(socket, '│ /appraisecar [name] - Get car appraised');
-  handler.sendToSocket(socket, '└──────────────────────────────────────────────────────────────┘');
+  handler.sendToSocket(socket, '├────────────────────────────────────────────────────────────────────────────────────┤');
+  handler.sendToSocket(socket, '│ /buycar [#]  /garage  /appraisecar [#]  /carspecs [#]  /refreshdealership');
+  handler.sendToSocket(socket, '└────────────────────────────────────────────────────────────────────────────────────┘');
 
   return true;
 }
@@ -108,46 +112,42 @@ function garage(ctx, targetUser = null) {
   const { handler, socket, username, gameState } = ctx;
 
   const viewUser = targetUser || username;
-  const garage = gameState.getGarage(viewUser);
+  const garageItems = gameState.getGarage(viewUser);
   const isOwnGarage = viewUser.toLowerCase() === username.toLowerCase();
 
-  handler.sendToSocket(socket, '┌──────────────────────────────────────────────────────────────┐');
-  handler.sendToSocket(socket, `│                    🏎️ ${isOwnGarage ? 'YOUR GARAGE' : viewUser.toUpperCase() + "'S GARAGE"} 🏎️`);
-  handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
+  handler.sendToSocket(socket, '┌────────────────────────────────────────────────────────────────────────────────────┐');
+  handler.sendToSocket(socket, `│                            🏎️ ${isOwnGarage ? 'YOUR GARAGE' : viewUser.toUpperCase() + "'S GARAGE"} 🏎️`);
+  handler.sendToSocket(socket, '├────────────────────────────────────────────────────────────────────────────────────┤');
 
-  if (garage.length === 0) {
+  if (garageItems.length === 0) {
     handler.sendToSocket(socket, `│ ${isOwnGarage ? 'Your garage is empty!' : 'This garage is empty!'}`);
     handler.sendToSocket(socket, '│ Visit /dealership to browse cars.');
   } else {
-    const sortedCars = sortCars([...garage]);
-    for (const car of sortedCars) {
-      if (typeof car !== 'object' || !car.name) continue;
+    const sortedCars = sortCars([...garageItems]);
+    sortedCars.forEach((car, idx) => {
+      if (typeof car !== 'object' || !car.name) return;
 
+      const num = (idx + 1).toString().padStart(2);
       const emoji = car.emoji || '🚗';
       const rarity = getRarityDisplay(car.rarity);
-      const name = car.name.length > 25 ? car.name.substring(0, 23) + '..' : car.name;
+      const name = car.name.length > 35 ? car.name.substring(0, 33) + '..' : car.name;
       const price = `$${formatPrice(car.price)}`;
 
       // Check for appraisal
       const appraisedValue = gameState.getCarAppraisedValue(viewUser, car.name);
-      let valueDisplay = price;
+      let valueDisplay = price.padStart(14);
       if (appraisedValue !== null) {
         valueDisplay = `$${formatPrice(appraisedValue)} (appraised)`;
       }
 
-      handler.sendToSocket(socket, `│ ${rarity} ${emoji} ${name.padEnd(25)} ${valueDisplay}`);
-      if (car.horsepower || car.topSpeed) {
-        const hp = car.horsepower ? `${car.horsepower}hp` : '';
-        const speed = car.topSpeed || '';
-        handler.sendToSocket(socket, `│     ${hp}${hp && speed ? ' | ' : ''}${speed}`);
-      }
-    }
+      handler.sendToSocket(socket, `│ ${num}. ${rarity} ${emoji} ${name.padEnd(35)} ${valueDisplay}`);
+    });
   }
 
   // Show pending appraisals
   const pending = gameState.getPendingCarAppraisalsForUser(viewUser);
   if (pending.length > 0) {
-    handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
+    handler.sendToSocket(socket, '├────────────────────────────────────────────────────────────────────────────────────┤');
     handler.sendToSocket(socket, '│ 🔍 CARS BEING APPRAISED:');
     for (const p of pending) {
       const carName = p.car?.name || p.carName || 'Unknown';
@@ -158,11 +158,9 @@ function garage(ctx, targetUser = null) {
     }
   }
 
-  handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
-  handler.sendToSocket(socket, '│ /sellcar [name] - Sell a car');
-  handler.sendToSocket(socket, '│ /appraisecar [name] - Get a car appraised');
-  handler.sendToSocket(socket, '│ /givecar [user] [name] - Give a car to someone');
-  handler.sendToSocket(socket, '└──────────────────────────────────────────────────────────────┘');
+  handler.sendToSocket(socket, '├────────────────────────────────────────────────────────────────────────────────────┤');
+  handler.sendToSocket(socket, '│ /sellcar [#]  /appraisecar [#]  /givecar [user] [#]  /carspecs [#]');
+  handler.sendToSocket(socket, '└────────────────────────────────────────────────────────────────────────────────────┘');
 
   return true;
 }
@@ -170,9 +168,9 @@ function garage(ctx, targetUser = null) {
 function garages(ctx) {
   const { handler, socket, gameState } = ctx;
 
-  handler.sendToSocket(socket, '┌──────────────────────────────────────────────────────────────┐');
-  handler.sendToSocket(socket, '│                    🏎️ ALL GARAGES 🏎️                         │');
-  handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
+  handler.sendToSocket(socket, '┌────────────────────────────────────────────────────────────────────────────────────┐');
+  handler.sendToSocket(socket, '│                                   🏎️ ALL GARAGES 🏎️                                │');
+  handler.sendToSocket(socket, '├────────────────────────────────────────────────────────────────────────────────────┤');
 
   const allGarages = Array.from(gameState.garages.entries())
     .filter(([_, cars]) => cars.length > 0)
@@ -187,13 +185,13 @@ function garages(ctx) {
         const appraised = gameState.getCarAppraisedValue(owner, car.name);
         return sum + (appraised || car.price || 0);
       }, 0);
-      handler.sendToSocket(socket, `│ ${owner}: ${cars.length} car${cars.length !== 1 ? 's' : ''} (worth ~$${formatPrice(totalValue)})`);
+      handler.sendToSocket(socket, `│ ${owner.padEnd(20)}: ${cars.length} car${cars.length !== 1 ? 's' : ''} (worth ~$${formatPrice(totalValue)})`);
     }
   }
 
-  handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
+  handler.sendToSocket(socket, '├────────────────────────────────────────────────────────────────────────────────────┤');
   handler.sendToSocket(socket, '│ /garage [username] - View someone\'s garage');
-  handler.sendToSocket(socket, '└──────────────────────────────────────────────────────────────┘');
+  handler.sendToSocket(socket, '└────────────────────────────────────────────────────────────────────────────────────┘');
 
   return true;
 }
@@ -202,22 +200,31 @@ function buycar(ctx, args) {
   const { handler, socket, username, gameState } = ctx;
 
   if (!args || args.trim().length === 0) {
-    handler.sendToSocket(socket, 'Usage: /buycar [car name]');
-    handler.sendToSocket(socket, 'Example: /buycar 1992 Honda Civic');
+    handler.sendToSocket(socket, 'Usage: /buycar [number or car name]');
+    handler.sendToSocket(socket, 'Example: /buycar 1  or  /buycar Honda Civic');
     return true;
   }
 
-  const carName = args.trim();
+  const input = args.trim();
   const cars = dealershipConfig.getAvailableCars();
+  const sortedCars = sortCars([...cars]);
 
-  // Find car by name (case insensitive, partial match)
-  const car = cars.find(c =>
-    c.name.toLowerCase() === carName.toLowerCase() ||
-    c.name.toLowerCase().includes(carName.toLowerCase())
-  );
+  let car = null;
+
+  // Try parsing as number first
+  const num = parseInt(input);
+  if (!isNaN(num) && num >= 1 && num <= sortedCars.length) {
+    car = sortedCars[num - 1];
+  } else {
+    // Find car by name (case insensitive, partial match)
+    car = sortedCars.find(c =>
+      c.name.toLowerCase() === input.toLowerCase() ||
+      c.name.toLowerCase().includes(input.toLowerCase())
+    );
+  }
 
   if (!car) {
-    handler.sendToSocket(socket, `Car "${carName}" not found in dealership.`);
+    handler.sendToSocket(socket, `Car "${input}" not found in dealership.`);
     handler.sendToSocket(socket, 'Use /dealership to see available cars.');
     return true;
   }
@@ -250,22 +257,30 @@ function sellcar(ctx, args) {
   const { handler, socket, username, gameState } = ctx;
 
   if (!args || args.trim().length === 0) {
-    handler.sendToSocket(socket, 'Usage: /sellcar [car name]');
+    handler.sendToSocket(socket, 'Usage: /sellcar [number or car name]');
     return true;
   }
 
-  const carName = args.trim();
-  const garage = gameState.getGarage(username);
+  const input = args.trim();
+  const garageItems = gameState.getGarage(username);
+  const sortedCars = sortCars([...garageItems].filter(c => typeof c === 'object' && c.name));
 
-  // Find car in garage
-  const car = garage.find(c =>
-    typeof c === 'object' &&
-    (c.name.toLowerCase() === carName.toLowerCase() ||
-     c.name.toLowerCase().includes(carName.toLowerCase()))
-  );
+  let car = null;
+
+  // Try parsing as number first
+  const num = parseInt(input);
+  if (!isNaN(num) && num >= 1 && num <= sortedCars.length) {
+    car = sortedCars[num - 1];
+  } else {
+    // Find car by name
+    car = sortedCars.find(c =>
+      c.name.toLowerCase() === input.toLowerCase() ||
+      c.name.toLowerCase().includes(input.toLowerCase())
+    );
+  }
 
   if (!car) {
-    handler.sendToSocket(socket, `You don't own a car matching "${carName}".`);
+    handler.sendToSocket(socket, `You don't own a car matching "${input}".`);
     return true;
   }
 
@@ -304,18 +319,18 @@ function givecar(ctx, args) {
   const { handler, socket, username, gameState, connectedUsers } = ctx;
 
   if (!args || args.trim().length === 0) {
-    handler.sendToSocket(socket, 'Usage: /givecar [username] [car name]');
+    handler.sendToSocket(socket, 'Usage: /givecar [username] [number or car name]');
     return true;
   }
 
   const parts = args.trim().split(' ');
   if (parts.length < 2) {
-    handler.sendToSocket(socket, 'Usage: /givecar [username] [car name]');
+    handler.sendToSocket(socket, 'Usage: /givecar [username] [number or car name]');
     return true;
   }
 
   const targetUsername = parts[0];
-  const carName = parts.slice(1).join(' ');
+  const carInput = parts.slice(1).join(' ');
 
   // Check target exists (connectedUsers is Map of socketId -> username string)
   const allUsernames = Array.from(connectedUsers.values());
@@ -333,15 +348,24 @@ function givecar(ctx, args) {
   }
 
   // Find car in garage
-  const garage = gameState.getGarage(username);
-  const car = garage.find(c =>
-    typeof c === 'object' &&
-    (c.name.toLowerCase() === carName.toLowerCase() ||
-     c.name.toLowerCase().includes(carName.toLowerCase()))
-  );
+  const garageItems = gameState.getGarage(username);
+  const sortedCars = sortCars([...garageItems].filter(c => typeof c === 'object' && c.name));
+
+  let car = null;
+
+  // Try parsing as number first
+  const num = parseInt(carInput);
+  if (!isNaN(num) && num >= 1 && num <= sortedCars.length) {
+    car = sortedCars[num - 1];
+  } else {
+    car = sortedCars.find(c =>
+      c.name.toLowerCase() === carInput.toLowerCase() ||
+      c.name.toLowerCase().includes(carInput.toLowerCase())
+    );
+  }
 
   if (!car) {
-    handler.sendToSocket(socket, `You don't own a car matching "${carName}".`);
+    handler.sendToSocket(socket, `You don't own a car matching "${carInput}".`);
     return true;
   }
 
@@ -379,14 +403,14 @@ function appraisecar(ctx, args) {
   if (!args || args.trim().length === 0) {
     const pending = gameState.getPendingCarAppraisalsForUser(username);
     if (pending.length === 0) {
-      handler.sendToSocket(socket, 'Usage: /appraisecar [car name]');
+      handler.sendToSocket(socket, 'Usage: /appraisecar [number or car name]');
       handler.sendToSocket(socket, 'You have no cars currently being appraised.');
       return true;
     }
 
-    handler.sendToSocket(socket, '┌──────────────────────────────────────────────────────────────┐');
-    handler.sendToSocket(socket, '│                  PENDING CAR APPRAISALS                      │');
-    handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
+    handler.sendToSocket(socket, '┌────────────────────────────────────────────────────────────────────────────────────┐');
+    handler.sendToSocket(socket, '│                              PENDING CAR APPRAISALS                               │');
+    handler.sendToSocket(socket, '├────────────────────────────────────────────────────────────────────────────────────┤');
 
     pending.forEach(p => {
       const carName = p.car?.name || p.carName || 'Unknown';
@@ -394,25 +418,32 @@ function appraisecar(ctx, args) {
       const remaining = Math.max(0, p.returnTime - Date.now());
       const mins = Math.floor(remaining / 60000);
       const secs = Math.floor((remaining % 60000) / 1000);
-      handler.sendToSocket(socket, `│ ${emoji} ${carName.padEnd(30)} ${mins}m ${secs}s remaining`);
+      handler.sendToSocket(socket, `│ ${emoji} ${carName.padEnd(40)} ${mins}m ${secs}s remaining`);
     });
 
-    handler.sendToSocket(socket, '└──────────────────────────────────────────────────────────────┘');
+    handler.sendToSocket(socket, '└────────────────────────────────────────────────────────────────────────────────────┘');
     return true;
   }
 
-  const carName = args.trim();
-  const garage = gameState.getGarage(username);
+  const input = args.trim();
+  const garageItems = gameState.getGarage(username);
+  const sortedCars = sortCars([...garageItems].filter(c => typeof c === 'object' && c.name));
 
-  // Find car in garage
-  const car = garage.find(c =>
-    typeof c === 'object' &&
-    (c.name.toLowerCase() === carName.toLowerCase() ||
-     c.name.toLowerCase().includes(carName.toLowerCase()))
-  );
+  let car = null;
+
+  // Try parsing as number first
+  const num = parseInt(input);
+  if (!isNaN(num) && num >= 1 && num <= sortedCars.length) {
+    car = sortedCars[num - 1];
+  } else {
+    car = sortedCars.find(c =>
+      c.name.toLowerCase() === input.toLowerCase() ||
+      c.name.toLowerCase().includes(input.toLowerCase())
+    );
+  }
 
   if (!car) {
-    handler.sendToSocket(socket, `You don't own a car matching "${carName}".`);
+    handler.sendToSocket(socket, `You don't own a car matching "${input}".`);
     return true;
   }
 
@@ -663,23 +694,30 @@ function carspecs(ctx, args) {
   const { handler, socket, username, gameState } = ctx;
 
   if (!args || args.trim().length === 0) {
-    handler.sendToSocket(socket, 'Usage: /carspecs [car name]');
+    handler.sendToSocket(socket, 'Usage: /carspecs [number or car name]');
     handler.sendToSocket(socket, 'View the hidden specs of a car you own.');
     return true;
   }
 
-  const carName = args.trim();
-  const garage = gameState.getGarage(username);
+  const input = args.trim();
+  const garageItems = gameState.getGarage(username);
+  const sortedCars = sortCars([...garageItems].filter(c => typeof c === 'object' && c.name));
 
-  // Find car in garage
-  const car = garage.find(c =>
-    typeof c === 'object' &&
-    (c.name.toLowerCase() === carName.toLowerCase() ||
-     c.name.toLowerCase().includes(carName.toLowerCase()))
-  );
+  let car = null;
+
+  // Try parsing as number first
+  const num = parseInt(input);
+  if (!isNaN(num) && num >= 1 && num <= sortedCars.length) {
+    car = sortedCars[num - 1];
+  } else {
+    car = sortedCars.find(c =>
+      c.name.toLowerCase() === input.toLowerCase() ||
+      c.name.toLowerCase().includes(input.toLowerCase())
+    );
+  }
 
   if (!car) {
-    handler.sendToSocket(socket, `You don't own a car matching "${carName}".`);
+    handler.sendToSocket(socket, `You don't own a car matching "${input}".`);
     return true;
   }
 
@@ -692,22 +730,21 @@ function carspecs(ctx, args) {
   const specs = car.specs;
   const emoji = car.emoji || '🚗';
 
-  handler.sendToSocket(socket, '┌──────────────────────────────────────────────────────────────┐');
+  handler.sendToSocket(socket, '┌────────────────────────────────────────────────────────────────────────────────────┐');
   handler.sendToSocket(socket, `│ ${emoji} ${car.name.toUpperCase()} - SECRET SPECS`);
-  handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
+  handler.sendToSocket(socket, '├────────────────────────────────────────────────────────────────────────────────────┤');
   handler.sendToSocket(socket, `│ 🏎️ True Top Speed:    ${specs.trueTopSpeed} mph`);
   handler.sendToSocket(socket, `│ ⚡ True Acceleration:  ${specs.trueAcceleration}/100`);
   handler.sendToSocket(socket, `│ 🎯 True Handling:      ${specs.trueHandling}/100`);
   handler.sendToSocket(socket, `│ 🔧 Reliability:        ${specs.reliability}/100`);
   handler.sendToSocket(socket, `│ ⚖️  Weight:            ${specs.trueWeight} lbs`);
   handler.sendToSocket(socket, `│ 🚀 Nitro Charges:      ${specs.nitroCharges}`);
-  handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
+  handler.sendToSocket(socket, '├────────────────────────────────────────────────────────────────────────────────────┤');
   handler.sendToSocket(socket, `│ ⭐ Quirk: ${specs.quirk.name}`);
   handler.sendToSocket(socket, `│    "${specs.quirk.description}"`);
-  handler.sendToSocket(socket, '├──────────────────────────────────────────────────────────────┤');
-  handler.sendToSocket(socket, '│ These specs affect drag racing performance!');
-  handler.sendToSocket(socket, '│ Keep them secret from your opponents!');
-  handler.sendToSocket(socket, '└──────────────────────────────────────────────────────────────┘');
+  handler.sendToSocket(socket, '├────────────────────────────────────────────────────────────────────────────────────┤');
+  handler.sendToSocket(socket, '│ These specs affect drag racing performance! Keep them secret from your opponents!');
+  handler.sendToSocket(socket, '└────────────────────────────────────────────────────────────────────────────────────┘');
 
   return true;
 }
