@@ -24,14 +24,33 @@ function help(ctx) {
   return true;
 }
 
+function formatDuration(ms) {
+  const seconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+
+  if (hours > 0) {
+    return `${hours}h ${minutes % 60}m`;
+  } else if (minutes > 0) {
+    return `${minutes}m ${seconds % 60}s`;
+  } else {
+    return `${seconds}s`;
+  }
+}
+
 function users(ctx) {
   const userList = ctx.handler.getAllUsernames();
+  const userJoinTimes = ctx.userJoinTimes || new Map();
+  const now = Date.now();
+
   ctx.handler.sendToSocket(ctx.socket, `Online users (${userList.length}):`);
 
   userList.forEach(name => {
     const balance = ctx.gameState.getBalance(name);
     const marker = name === ctx.username ? ' (you)' : '';
-    ctx.handler.sendToSocket(ctx.socket, `  ${name}${marker} - $${balance}`);
+    const joinTime = userJoinTimes.get(name.toLowerCase());
+    const duration = joinTime ? formatDuration(now - joinTime) : '?';
+    ctx.handler.sendToSocket(ctx.socket, `  ${name}${marker} - $${balance} (${duration})`);
   });
 
   return true;

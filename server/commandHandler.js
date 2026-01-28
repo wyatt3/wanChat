@@ -11,11 +11,12 @@ const carsCommands = require('./commands/cars');
 const dragCommands = require('./commands/dragracing');
 
 class CommandHandler {
-  constructor(io, gameState, users, getTimestamp) {
+  constructor(io, gameState, users, getTimestamp, userJoinTimes = new Map()) {
     this.io = io;
     this.gameState = gameState;
     this.users = users;
     this.getTimestamp = getTimestamp;
+    this.userJoinTimes = userJoinTimes;
   }
 
   // Send system message to a specific socket
@@ -83,6 +84,7 @@ class CommandHandler {
       gameState: this.gameState,
       users: this.users,
       connectedUsers: this.users,  // Alias for compatibility
+      userJoinTimes: this.userJoinTimes,
       handler: this,
       getTimestamp: this.getTimestamp
     };

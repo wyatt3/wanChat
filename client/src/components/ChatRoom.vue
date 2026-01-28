@@ -116,22 +116,23 @@
           <template v-else-if="skin === 'notepad'">{{ users.length }} collaborators</template>
         </div>
         <ul class="user-list">
-          <li v-for="user in users" :key="user" class="user-item">
+          <li v-for="user in users" :key="getUserName(user)" class="user-item">
             <template v-if="skin === 'terminal'">
               <span class="user-indicator">></span>
-              <span :style="{ color: getUserColor(user) }">{{ user }}</span>
+              <span :style="{ color: getUserColor(getUserName(user)) }">{{ getUserName(user) }}</span>
             </template>
             <template v-else-if="skin === 'spreadsheet'">
-              <span class="spreadsheet-cell">{{ user }}</span>
+              <span class="spreadsheet-cell">{{ getUserName(user) }}</span>
             </template>
             <template v-else-if="skin === 'email'">
               <span class="email-folder-icon">📁</span>
-              <span>{{ user }}</span>
+              <span>{{ getUserName(user) }}</span>
             </template>
             <template v-else>
-              <span>{{ user }}</span>
+              <span>{{ getUserName(user) }}</span>
             </template>
-            <span v-if="balances[user]" class="user-balance">${{ balances[user] }}</span>
+            <span class="user-time">{{ formatUserTime(user) }}</span>
+            <span v-if="balances[getUserName(user)]" class="user-balance">${{ balances[getUserName(user)] }}</span>
           </li>
         </ul>
       </div>
@@ -141,7 +142,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import MessageList from './MessageList.vue'
 import CommandInput from './CommandInput.vue'
 import BlackjackTable from './games/BlackjackTable.vue'
@@ -183,6 +184,54 @@ const props = defineProps({
 
 const emit = defineEmits(['send', 'snake-input', 'snake-quit', 'flash-quit', 'flash-frame', 'change-skin', 'local-message', 'drag-input', 'drag-nitro'])
 const updating = ref(false)
+
+// Timer tick to refresh time display
+const timeTick = ref(0)
+let timeInterval = null
+
+onMounted(() => {
+  // Update time display every 10 seconds
+  timeInterval = setInterval(() => {
+    timeTick.value++
+  }, 10000)
+})
+
+onUnmounted(() => {
+  if (timeInterval) {
+    clearInterval(timeInterval)
+  }
+})
+
+// Get username from user object or string (backwards compatible)
+function getUserName(user) {
+  if (typeof user === 'object' && user.name) {
+    return user.name
+  }
+  return user
+}
+
+// Format user's session time
+function formatUserTime(user) {
+  // Reference timeTick to trigger reactivity
+  void timeTick.value
+
+  if (typeof user !== 'object' || !user.joinTime) {
+    return ''
+  }
+  const now = Date.now()
+  const ms = now - user.joinTime
+  const seconds = Math.floor(ms / 1000)
+  const minutes = Math.floor(seconds / 60)
+  const hours = Math.floor(minutes / 60)
+
+  if (hours > 0) {
+    return `${hours}h${minutes % 60}m`
+  } else if (minutes > 0) {
+    return `${minutes}m`
+  } else {
+    return `${seconds}s`
+  }
+}
 
 // Generate consistent color from username
 function getUserColor(username) {
@@ -358,6 +407,13 @@ async function waitForServer() {
 .user-balance {
   color: #4ade80;
   font-size: 0.8em;
+}
+
+.user-time {
+  color: #888;
+  font-size: 0.75em;
+  margin-left: auto;
+  margin-right: 5px;
 }
 
 .update-btn {

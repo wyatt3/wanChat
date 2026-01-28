@@ -24,6 +24,9 @@ const PORT = process.env.PORT || 3000;
 // Store connected users
 const users = new Map();
 
+// Store join times for users
+const userJoinTimes = new Map();
+
 // Initialize game state
 const gameState = new GameState();
 
@@ -138,7 +141,7 @@ function getTimestamp() {
 }
 
 // Initialize command handler
-const commandHandler = new CommandHandler(io, gameState, users, getTimestamp);
+const commandHandler = new CommandHandler(io, gameState, users, getTimestamp, userJoinTimes);
 
 // Restore pending appraisal timers from saved state
 storeCommands.restoreAppraisalTimers(gameState, io, commandHandler);
@@ -153,14 +156,21 @@ io.on('connection', (socket) => {
     // Store username for this socket
     users.set(socket.id, username);
 
+    // Store join time
+    userJoinTimes.set(username.toLowerCase(), Date.now());
+
     // Notify all users
     io.emit('system', {
       text: `${username} has joined the room`,
       time: getTimestamp()
     });
 
-    // Send updated user list
-    io.emit('users', Array.from(users.values()));
+    // Send updated user list with join times
+    const usersWithTimes = Array.from(users.values()).map(name => ({
+      name,
+      joinTime: userJoinTimes.get(name.toLowerCase()) || Date.now()
+    }));
+    io.emit('users', usersWithTimes);
 
     console.log(`${username} joined`);
   });
@@ -321,14 +331,21 @@ io.on('connection', (socket) => {
 
       users.delete(socket.id);
 
+      // Clear join time for this user
+      userJoinTimes.delete(username.toLowerCase());
+
       // Notify all users
       io.emit('system', {
         text: `${username} has left the room`,
         time: getTimestamp()
       });
 
-      // Send updated user list
-      io.emit('users', Array.from(users.values()));
+      // Send updated user list with join times
+      const usersWithTimes = Array.from(users.values()).map(name => ({
+        name,
+        joinTime: userJoinTimes.get(name.toLowerCase()) || Date.now()
+      }));
+      io.emit('users', usersWithTimes);
 
       console.log(`${username} left`);
     }
